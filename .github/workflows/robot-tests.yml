@@ -1,0 +1,82 @@
+name: Robot Framework Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Executa todo dia util as 07:00 (UTC-3 = 10:00 UTC)
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Suite para rodar (setup | examples | all-suites | tag)'
+        required: false
+        default: 'all-suites'
+      tag:
+        description: 'Tag especifica (somente quando suite=tag)'
+        required: false
+        default: ''
+
+# Roda no agente self-hosted instalado na maquina VW
+jobs:
+  robot-tests:
+    runs-on: [self-hosted, windows, uau-automation]
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      # Cria o .env com os secrets configurados no repositorio GitHub
+      - name: Criar .env com credenciais
+        shell: pwsh
+        run: |
+          @"
+          UAUXT_USUARIO=${{ secrets.UAUXT_USUARIO }}
+          UAUXT_SENHA=${{ secrets.UAUXT_SENHA }}
+          UAUXT_EXE=${{ secrets.UAUXT_EXE }}
+          COMPILADOR_DIR=${{ secrets.COMPILADOR_DIR }}
+          COMPILADOR_PASTA_SAIDA=${{ secrets.COMPILADOR_PASTA_SAIDA }}
+          VS_EXE=${{ secrets.VS_EXE }}
+          TFS_SERVIDOR=${{ secrets.TFS_SERVIDOR }}
+          TFS_PROJETO=${{ secrets.TFS_PROJETO }}
+          TFS_BRANCH=${{ secrets.TFS_BRANCH }}
+          TFS_PASTA_ALVO=${{ secrets.TFS_PASTA_ALVO }}
+          "@ | Set-Content .env
+
+      - name: Instalar dependencias Python
+        shell: pwsh
+        run: .\robot-runner.ps1 deps
+
+      - name: Rodar suite selecionada
+        shell: pwsh
+        run: |
+          $suite = "${{ github.event.inputs.suite }}"
+          if (-not $suite) { $suite = "all-suites" }
+
+          if ($suite -eq "tag") {
+            $tag = "${{ github.event.inputs.tag }}"
+            .\robot-runner.ps1 tag $tag
+          } else {
+            .\robot-runner.ps1 $suite
+          }
+
+      # Publica os resultados mesmo se os testes falharem
+      - name: Publicar resultados Robot Framework
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-results-${{ github.run_number }}
+          path: |
+            results/log.html
+            results/report.html
+            results/output.xml
+          retention-days: 30
+
+      # Limpa o .env apos execucao por seguranca
+      - name: Limpar .env
+        if: always()
+        shell: pwsh
+        run: Remove-Item .env -ErrorAction SilentlyContinue

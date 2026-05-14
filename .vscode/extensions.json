@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "robotframework.robotframework-lsp",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "tamasfe.even-better-toml"
+  ]
+}

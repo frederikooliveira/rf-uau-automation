@@ -1,0 +1,4 @@
+[tool.robot]
+pythonpath = ["resources"]
+outputdir = "results"
+variablefile = ["resources/scripts/dotenv_loader.py"]

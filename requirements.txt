@@ -1,0 +1,9 @@
+robotframework==6.1.1
+rpaframework==28.6.3
+rpaframework-windows
+pywinauto
+python-dotenv
+robotframework-robocop
+robotframework-tidy
+robotframework-pabot
+robotframework-debuglibrary

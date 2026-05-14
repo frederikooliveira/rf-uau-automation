@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+
+# Arquivos locais com credenciais - NAO versionar
+.env
+.env.local
+.env.*.local
+config/local*.resource
+config/secrets*.resource
+
+# Artefatos de execucao Robot Framework
+results/
+log.html
+output.xml
+report.html

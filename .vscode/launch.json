@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "robotframework-lsp",
+      "name": "Debug Robot File",
+      "request": "launch",
+      "target": "${file}",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
