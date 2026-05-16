@@ -91,7 +91,7 @@ Abrir UauXT, Confirmar Popup E Preencher Login
     [Arguments]    ${caminho_exe}=${UAUXT_EXE}    ${credenciais}=${UAUXT_CREDENCIAIS_PADRAO}
     Abrir UauXT E Confirmar Popup Inicial    ${caminho_exe}
     Log    [UAUXT] Preenchendo credenciais de login...    console=True
-    Pausa Controlada  4s    Aguardando tela de login ficar pronta
+    Pausa Controlada  15s    Aguardando tela de login ficar pronta
     Preencher Login UauXT    ${credenciais}[usuario]    ${credenciais}[senha]
     Autenticar No UauXT
     Log    [UAUXT] Login concluido.    console=True
@@ -119,14 +119,32 @@ Selecionar Icone Menu Lateral Por Indice
     [Arguments]    ${indice}=${UAUXT_MENU_FINANCEIRO_INDICE}
     Focar No Menu Lateral Angular UauXT
     Log    [UAUXT] Selecionando icone ${indice} do menu lateral...    console=True
-    Send Keys    keys={HOME}
-    ${passos}=    Evaluate    int(${indice}) - 1
-    FOR    ${_}    IN RANGE    ${passos}
-        Send Keys    keys={DOWN}
-    END
-    Send Keys    keys={ENTER}
+    ${icone}=    Obter Icone Menu Lateral Por Ordem Vertical    ${indice}
+    Click    ${icone}
     Pausa Controlada    700ms    Aguardando abertura dos submenus do icone selecionado
     Log    [UAUXT] Icone ${indice} selecionado.    console=True
+
+Selecionar Icone Menu Lateral Por Glyph
+    [Documentation]    Seleciona um icone da coluna lateral pelo glyph (simbolo visual no TextControl).
+    [Arguments]    ${glyph}
+    Focar No Menu Lateral Angular UauXT
+    ${icones_coluna}=    Obter Icones Da Coluna Lateral
+    ${expr_glyph}=    Catenate    SEPARATOR=${EMPTY}
+    ...    [e for e in $icones_coluna if getattr(e, 'name', '') == '${glyph}']
+    ${candidatos}=    Evaluate    ${expr_glyph}
+    ${total}=    Get Length    ${candidatos}
+    IF    ${total} < 1
+        Fail    Nao foi possivel localizar icone com glyph '${glyph}' na coluna lateral.
+    END
+    ${icone}=    Get From List    ${candidatos}    0
+    Click    ${icone}
+    Pausa Controlada    700ms    Aguardando abertura dos submenus do glyph selecionado
+    Log    [UAUXT] Icone com glyph '${glyph}' selecionado.    console=True
+
+Selecionar Menu Lateral Por Texto
+    [Documentation]    Seleciona item de menu lateral por texto visivel (sem automacao por imagem).
+    [Arguments]    ${texto}    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Selecionar Submenu Aberto Por Nome    ${texto}    ${timeout}
 
 Selecionar Submenu Aberto Por Nome
     [Documentation]    Seleciona submenu visivel por nome apos abrir o menu lateral.
@@ -218,45 +236,24 @@ Acessar Tela Contas A Pagar Via Menu Lateral
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}
     Log    [UAUXT] Fluxo de acesso a Contas a Pagar concluido.    console=True
 
-Clicar Icone Maleta Financeiro
-    [Documentation]    Clica no icone da maleta (Financeiro) no menu lateral Angular/CefSharp.
+Clicar Icone Capacete Obras
+    [Documentation]    Clica no icone do capacete de obras (Financeiro) no menu lateral Angular/CefSharp.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Clicando no icone da maleta (Financeiro)...    console=True
-    Focar No Menu Lateral Angular UauXT    ${timeout}
-    @{icones_maleta}=    Get Elements
-    ...    subname:${UAUXT_MENU_ICONE_MALETA_GLYPH} and type:TextControl
-    ...    search_depth=20
-    ...    siblings_only=${False}
-    ${expr_maleta}=    Catenate    SEPARATOR=${EMPTY}
-    ...    sorted([e for e in $icones_maleta if e.top >= ${UAUXT_MENU_ICONE_MALETA_TOP_MIN} and e.top <= ${UAUXT_MENU_ICONE_MALETA_TOP_MAX}], key=lambda x: x.top)
-    ${candidatos_maleta}=    Evaluate    ${expr_maleta}
-    ${total_maleta}=    Get Length    ${candidatos_maleta}
-    IF    ${total_maleta} < 1
-        Fail    Nao foi possivel localizar o icone da maleta (glyph ${UAUXT_MENU_ICONE_MALETA_GLYPH}).
-    END
-    ${icone_maleta}=    Get From List    ${candidatos_maleta}    0
-    Wait Until Keyword Succeeds    ${timeout}    500ms
-    ...    Click    ${icone_maleta}
-    Pausa Controlada    700ms    Aguardando abertura do menu da maleta (Financeiro)
-    Log    [UAUXT] Icone da maleta clicado com sucesso.    console=True
+    Log    [UAUXT] Clicando no icone ${UAUXT_MENU_FINANCEIRO_INDICE} do menu lateral (menu principal/Financeiro)...    console=True
+    Selecionar Icone Menu Lateral Por Indice    ${UAUXT_MENU_FINANCEIRO_INDICE}
+    Pausa Controlada    700ms    Aguardando abertura do menu do capacete de obras (Financeiro)
+    Log    [UAUXT] Icone do capacete de obras clicado com sucesso.    console=True
+
+Clicar Icone Maleta Financeiro
+    [Documentation]    Alias legado para manter compatibilidade. Use Clicar Icone Capacete Obras.
+    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
+    Clicar Icone Capacete Obras    ${timeout}
 
 Obter Icone Menu Lateral Por Ordem Vertical
     [Documentation]    Retorna o icone da coluna lateral por ordem vertical (1..N).
     [Arguments]    ${ordem}
-    ${documento}=    Get Element    ${UAUXT_MENU_LATERAL_DOCUMENTO}
-    @{textos}=    Get Elements    type:TextControl    search_depth=16    siblings_only=${False}
-    ${doc_left}=    Evaluate    $documento.left
-    ${doc_top}=    Evaluate    $documento.top
-    ${doc_right}=    Evaluate    $documento.right
-    ${doc_bottom}=    Evaluate    $documento.bottom
-    ${min_top}=    Evaluate    $documento.top + 120
-    ${max_xcenter}=    Evaluate    $documento.left + 80
-    Log    [UAUXT] Bounds documento menu lateral: L=${doc_left} T=${doc_top} R=${doc_right} B=${doc_bottom}    console=True
-    ${total_textos}=    Get Length    ${textos}
-    Log    [UAUXT] Total TextControl visiveis: ${total_textos}    console=True
-    ${expr_icones}=    Catenate    SEPARATOR=${EMPTY}
-    ...    sorted([e for e in $textos if e.xcenter >= ${doc_left} and e.xcenter <= ${max_xcenter} and e.ycenter >= ${min_top} and e.ycenter <= ${doc_bottom}], key=lambda x: x.top)
-    ${icones_coluna}=    Evaluate    ${expr_icones}
+    ${icones_coluna}=    Obter Icones Da Coluna Lateral
     ${total}=    Get Length    ${icones_coluna}
     Log    [UAUXT] Candidatos de icone na coluna lateral: ${total}    console=True
     IF    ${total} < ${ordem}
@@ -266,20 +263,38 @@ Obter Icone Menu Lateral Por Ordem Vertical
     ${icone}=    Get From List    ${icones_coluna}    ${indice}
     RETURN    ${icone}
 
-Acessar Aprovacao Pagamentos Via Icone Maleta
-    [Documentation]    Estrategia unica: clica no icone maleta e acessa subniveis por clique.
+Obter Icones Da Coluna Lateral
+    [Documentation]    Retorna icones da coluna lateral usando a mesma estrategia do teste de captura.
+    ${documento}=    Get Element    ${UAUXT_MENU_LATERAL_DOCUMENTO}
+    @{textos}=    Get Elements    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:TextControl    search_depth=20    siblings_only=${False}
+    ${doc_left}=    Evaluate    $documento.left
+    ${doc_top}=    Evaluate    $documento.top
+    ${doc_bottom}=    Evaluate    $documento.bottom
+    ${expr_icones}=    Catenate    SEPARATOR=${EMPTY}
+    ...    sorted([e for e in $textos if e.xcenter >= ${doc_left} and e.xcenter <= (${doc_left} + 90) and e.ycenter >= (${doc_top} + 80) and e.ycenter <= ${doc_bottom}], key=lambda x: (x.top, x.left))
+    ${icones_coluna}=    Evaluate    ${expr_icones}
+    RETURN    ${icones_coluna}
+
+Acessar Aprovacao Pagamentos Via Icone Capacete Obras
+    [Documentation]    Estrategia unica: clica no icone capacete de obras e acessa subniveis por clique.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Clicar Icone Maleta Financeiro    ${timeout}
+    Clicar Icone Capacete Obras    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_APROVACAO_PAGAMENTOS_TEXTO}    ${timeout}
-    Log    [UAUXT] Navegacao por maleta ate aprovacao concluida.    console=True
+    Log    [UAUXT] Navegacao por capacete de obras ate aprovacao concluida.    console=True
 
-Acessar Contas A Pagar Via Icone Maleta
-    [Documentation]    Estrategia unica: maleta > Financeiro > Gestao financeira > Contas a Pagar.
+Acessar Aprovacao Pagamentos Via Icone Maleta
+    [Documentation]    Alias legado para manter compatibilidade. Use Acessar Aprovacao Pagamentos Via Icone Capacete Obras.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Clicar Icone Maleta Financeiro    ${timeout}
+    Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
+    Acessar Aprovacao Pagamentos Via Icone Capacete Obras    ${timeout}
+
+Acessar Contas A Pagar Via Icone Capacete Obras
+    [Documentation]    Estrategia unica: capacete de obras > Financeiro > Gestao financeira > Contas a Pagar.
+    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Clicar Icone Capacete Obras    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}    ${timeout}
     Pausa Controlada    700ms    Aguardando expansao do submenu Financeiro
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}    ${timeout}
@@ -291,7 +306,45 @@ Acessar Contas A Pagar Via Icone Maleta
         Wait Until Keyword Succeeds    ${timeout}    500ms
         ...    Click    ${UAUXT_MENU_ITEM_CONTAS_A_PAGAR_LOCATOR}
     END
-    Log    [UAUXT] Navegacao por maleta ate Contas a Pagar concluida.    console=True
+    Log    [UAUXT] Navegacao por capacete de obras ate Contas a Pagar concluida.    console=True
+
+Acessar Contas A Pagar Via Icone Maleta
+    [Documentation]    Alias legado para manter compatibilidade. Use Acessar Contas A Pagar Via Icone Capacete Obras.
+    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
+    Acessar Contas A Pagar Via Icone Capacete Obras    ${timeout}
+
+Capturar E Imprimir WebBrowser Menu Lateral
+    [Documentation]    Captura e imprime a arvore do MenuXt/wbBrowser e lista icones TextControl para mapear glyph/posicao.
+    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Log    [UAUXT] Capturando arvore do webbrowser lateral...    console=True
+    Wait Until Keyword Succeeds    ${timeout}    1s
+    ...    Control Window    id:MainView and type:WindowControl
+    Print Tree    ${UAUXT_MENU_LATERAL_HOST}    max_depth=14    log_as_warnings=True
+    Print Tree    ${UAUXT_MENU_LATERAL_BROWSER}    max_depth=14    log_as_warnings=True
+    Print Tree    ${UAUXT_MENU_LATERAL_DOCUMENTO}    max_depth=14    log_as_warnings=True
+    ${documento}=    Get Element    ${UAUXT_MENU_LATERAL_DOCUMENTO}
+    ${doc_left}=    Evaluate    $documento.left
+    ${doc_right}=    Evaluate    $documento.right
+    ${doc_top}=    Evaluate    $documento.top
+    ${doc_bottom}=    Evaluate    $documento.bottom
+    Log    [UAUXT] Bounds documento lateral: L=${doc_left} T=${doc_top} R=${doc_right} B=${doc_bottom}    console=True
+    @{textos}=    Get Elements    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:TextControl    search_depth=20    siblings_only=${False}
+    ${expr_icones}=    Catenate    SEPARATOR=${EMPTY}
+    ...    sorted([e for e in $textos if e.xcenter >= ${doc_left} and e.xcenter <= (${doc_left} + 90) and e.ycenter >= (${doc_top} + 80) and e.ycenter <= ${doc_bottom}], key=lambda x: (x.top, x.left))
+    ${icones_coluna}=    Evaluate    ${expr_icones}
+    ${total}=    Get Length    ${icones_coluna}
+    Log    [UAUXT] Total de icones candidatos na coluna lateral: ${total}    console=True
+    FOR    ${idx}    IN RANGE    ${total}
+        ${el}=    Get From List    ${icones_coluna}    ${idx}
+        ${nome}=    Evaluate    getattr($el, 'name', '')
+        ${left}=    Evaluate    $el.left
+        ${top}=    Evaluate    $el.top
+        ${right}=    Evaluate    $el.right
+        ${bottom}=    Evaluate    $el.bottom
+        Log    [UAUXT] [ICONE ${idx}] glyph='${nome}' rect=(${left},${top},${right},${bottom})    console=True
+    END
+    Log    [UAUXT] Glyph configurado para capacete: '${UAUXT_MENU_ICONE_CAPACETE_GLYPH}' locator='${UAUXT_MENU_ICONE_CAPACETE_LOCATOR}'    console=True
 
 Navegar Para Menu
     [Documentation]    Navega para um menu específico no UauXT.

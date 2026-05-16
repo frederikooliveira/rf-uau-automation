@@ -5,7 +5,7 @@ Documentation       Dados e configuracoes da aplicacao UauXT.
 *** Variables ***
 # Caminhos e executaveis
 # Pode ser sobrescrito pela variavel de ambiente UAUXT_EXE
-${UAUXT_EXE}                %{UAUXT_EXE=C:/UAU/UAU XT/Modulos/UauXT.exe}
+${UAUXT_EXE}                %{UAUXT_EXE=ENV.UAUXT_EXE}
 
 # Credenciais: lidas de variaveis de ambiente (definidas no .env local ou CI/CD)
 # Nao definir valores reais neste arquivo - use .env (ver .env.example)

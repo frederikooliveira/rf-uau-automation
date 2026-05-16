@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 _env_file = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(dotenv_path=_env_file, override=False)
+load_dotenv(dotenv_path=_env_file, override=True)
 
 
 def get_variables():

@@ -40,12 +40,15 @@ if (Test-Path $envFile) {
         [System.Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), 'Process')
     }
     Write-Host "[ENV] Variaveis carregadas de .env" -ForegroundColor DarkGray
+    if ($env:UAUXT_EXE) {
+        Write-Host "[ENV] UAUXT_EXE efetivo: $($env:UAUXT_EXE)" -ForegroundColor DarkGray
+    }
 }
 
 # Executa o robot em uma pasta ou arquivo e para o pipeline em caso de falha.
 function Invoke-Robot {
     param([string]$Caminho)
-    & $python -m robot --outputdir results $Caminho
+    & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" $Caminho
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -59,7 +62,7 @@ switch ($Task.ToLowerInvariant()) {
     # --- Etapas individuais ---
     "setup" {
         # Etapa 1: baixar versao + Etapa 2: compilar componentes + Etapa 3: compilar modulos + Etapa 4: mover arquivos
-        & $python -m robot --outputdir results --exitonfailure tests\01_pipeline_setup
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --exitonfailure tests\01_pipeline_setup
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     "modulos" {
@@ -83,19 +86,19 @@ switch ($Task.ToLowerInvariant()) {
     # .\robot-runner.ps1 tag examples   -> roda apenas testes com tag "examples"
     "tag" {
         if (-not $Arg) { Write-Error "Informe a tag. Ex: .\robot-runner.ps1 tag funcional"; exit 1 }
-        & $python -m robot --outputdir results --include $Arg tests
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --include $Arg tests
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
     # --- Aguardar compilacao ---
     "aguardar" {
         # Aguarda o resultado da compilacao ja iniciada no UAUCompilador
-        & $python -m robot --outputdir results --test "Aguardar Compilacao" tests\01_pipeline_setup\02_compile_componentes_uau.robot
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --test "Aguardar Compilacao" tests\01_pipeline_setup\02_compile_componentes_uau.robot
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     "aguardar-modulos" {
         # Aguarda o resultado da compilacao dos modulos UAU ja iniciada
-        & $python -m robot --outputdir results --test "Aguardar Compilacao Modulos" tests\01_pipeline_setup\03_compile_modulos_uau.robot
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --test "Aguardar Compilacao Modulos" tests\01_pipeline_setup\03_compile_modulos_uau.robot
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     "compilar-modulos" {
