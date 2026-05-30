@@ -49,8 +49,8 @@ rf-uau-automation/
 ### 1. Configuração Inicial
 
 ```bash
-# Python 3.13 é obrigatório (rpaframework incompatível com 3.14)
-py -3.13 -m venv .venv
+# Python 3.11 é obrigatório (rpaframework incompatível com 3.14)
+py -3.11 -m venv .venv
 
 # Ativar virtual environment
 .venv\Scripts\activate

@@ -91,7 +91,7 @@ Abrir UauXT, Confirmar Popup E Preencher Login
     [Arguments]    ${caminho_exe}=${UAUXT_EXE}    ${credenciais}=${UAUXT_CREDENCIAIS_PADRAO}
     Abrir UauXT E Confirmar Popup Inicial    ${caminho_exe}
     Log    [UAUXT] Preenchendo credenciais de login...    console=True
-    Pausa Controlada  15s    Aguardando tela de login ficar pronta
+    Pausa Controlada  5s    Aguardando tela de login ficar pronta
     Preencher Login UauXT    ${credenciais}[usuario]    ${credenciais}[senha]
     Autenticar No UauXT
     Log    [UAUXT] Login concluido.    console=True
@@ -296,9 +296,9 @@ Acessar Contas A Pagar Via Icone Capacete Obras
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
     Clicar Icone Capacete Obras    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}    ${timeout}
-    Pausa Controlada    700ms    Aguardando expansao do submenu Financeiro
+    Pausa Controlada    100ms    Aguardando expansao do submenu Financeiro
     Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}    ${timeout}
-    Pausa Controlada    700ms    Aguardando expansao do submenu Gestao Financeira
+    Pausa Controlada    100ms    Aguardando expansao do submenu Gestao Financeira
     ${acessou_contas_a_pagar}=    Run Keyword And Return Status
     ...    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}    ${timeout}
     IF    not ${acessou_contas_a_pagar}

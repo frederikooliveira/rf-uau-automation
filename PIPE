@@ -1,1 +1,1 @@
-{"ok": true, "handle": 2230618, "action": "set-grid-cell", "page_up_times": 1, "start_row": 1, "col_index": 5, "rows_count": 1, "value": "DVQ", "row_index": 1}
+{"ok": true, "handle": 658286, "action": "click-cell-button", "page_up_times": 1, "row_index": 0, "col_index": 13, "interaction_mode": "alt-down", "click_x": 0, "click_y": 0, "click_ok": true, "error": ""}

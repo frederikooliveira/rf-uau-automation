@@ -33,7 +33,8 @@ ${UAUXT_AREA_TRABALHO}            id:WorkArea
 ${UAUXT_MENU_LATERAL_HOST}        id:MenuXt and type:PaneControl
 ${UAUXT_MENU_LATERAL_BROWSER}     id:wbBrowser and type:PaneControl
 ${UAUXT_MENU_LATERAL_DOCUMENTO}   id:MenuXt > id:wbBrowser > type:DocumentControl and name:ErpxtApp
-${UAUXT_MENU_FINANCEIRO_INDICE}   5
+# Indice 6, caso tenha o senior X vinculado. Senão é o 5.
+${UAUXT_MENU_FINANCEIRO_INDICE}   5 
 ${UAUXT_MENU_ICONE_CAPACETE_GLYPH}    
 ${UAUXT_MENU_ICONE_CAPACETE_LOCATOR}    ${UAUXT_MENU_LATERAL_DOCUMENTO} > path:1|7|1|1
 @{UAUXT_MENU_ICONES_FINANCEIRO_CANDIDATOS}

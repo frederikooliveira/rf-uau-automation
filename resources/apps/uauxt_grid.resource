@@ -183,6 +183,202 @@ Alterar Celula No Grid Processos Pagamento
     ...    ${value}
     RETURN    ${payload}
 
+Ler Valor Da Celula No Grid UauXT
+    [Documentation]    Le o valor de uma celula especifica do grid informando linha e coluna (0-based).
+    [Arguments]    ${target_text}=${UAUXT_GRID_TARGET_TEXT}
+    ...    ${row_index}=0
+    ...    ${col_index}=1
+    ...    ${grid_index}=${UAUXT_GRID_PREFERRED_INDEX}
+    ${grid}=    Registrar Grid UauXT Por Win32    ${target_text}    ${grid_index}
+    ${handle}=    Get From Dictionary    ${grid}    handle
+    ${json_output}=    Executar Probe Grid UauXT
+    ...    get-cell
+    ...    --handle
+    ...    ${handle}
+    ...    --page-up-times
+    ...    1
+    ...    --row-index
+    ...    ${row_index}
+    ...    --col-index
+    ...    ${col_index}
+    ${payload}=    Parsear Payload Json Do Probe    ${json_output}
+    ${ok}=    Get From Dictionary    ${payload}    ok
+    Should Be True    ${ok}    Nao foi possivel ler valor da celula no grid.
+    ${cell_value}=    Get From Dictionary    ${payload}    value
+    Log    [UAUXT-GRID] Valor lido. handle=${handle} linha=${row_index} coluna=${col_index} valor='${cell_value}'    console=True
+    RETURN    ${cell_value}
+
+Ler Valor Da Celula No Grid Processos Pagamento
+    [Documentation]    Le valor de uma celula do grid de Processos de pagamento (linha 1-based, converte internamente).
+    [Arguments]    ${row_index}    ${col_index}
+    ${row_0}=    Evaluate    int($row_index) - 1 if int($row_index) >= 1 else int($row_index)
+    ${cell_value}=    Ler Valor Da Celula No Grid UauXT
+    ...    ${UAUXT_GRID_PROCESSOS_PAGAMENTO_TARGET_TEXT}
+    ...    ${row_0}
+    ...    ${col_index}
+    ...    ${UAUXT_GRID_PREFERRED_INDEX}
+    RETURN    ${cell_value}
+
+Alterar Celulas No Grid UauXT Por Indices De Linha
+    [Documentation]    Preenche uma coluna para uma lista de indices de linha em uma unica navegacao.
+    [Arguments]    ${target_text}=${UAUXT_GRID_TARGET_TEXT}
+    ...    ${col_index}=1
+    ...    ${value}=${EMPTY}
+    ...    ${grid_index}=${UAUXT_GRID_PREFERRED_INDEX}
+    ...    ${move_delay_ms}=${UAUXT_GRID_BATCH_MOVE_DELAY_MS}
+    ...    ${type_delay_ms}=${UAUXT_GRID_BATCH_TYPE_DELAY_MS}
+    ...    ${commit_delay_ms}=${UAUXT_GRID_BATCH_COMMIT_DELAY_MS}
+    ...    @{row_indexes}
+    ${total_indices}=    Get Length    ${row_indexes}
+    Should Be True    ${total_indices} > 0    Informe ao menos um indice de linha para preenchimento em lote.
+    ${row_indexes_csv}=    Evaluate    ','.join(str(int(i)) for i in $row_indexes)
+    ${grid}=    Registrar Grid UauXT Por Win32    ${target_text}    ${grid_index}
+    ${handle}=    Get From Dictionary    ${grid}    handle
+    ${json_output}=    Executar Probe Grid UauXT
+    ...    fill-grid-indexes
+    ...    --handle
+    ...    ${handle}
+    ...    --page-up-times
+    ...    1
+    ...    --col-index
+    ...    ${col_index}
+    ...    --row-indexes
+    ...    ${row_indexes_csv}
+    ...    --value
+    ...    ${value}
+    ...    --move-delay-ms
+    ...    ${move_delay_ms}
+    ...    --type-delay-ms
+    ...    ${type_delay_ms}
+    ...    --commit-delay-ms
+    ...    ${commit_delay_ms}
+    ${payload}=    Parsear Payload Json Do Probe    ${json_output}
+    ${ok}=    Get From Dictionary    ${payload}    ok
+    ${touched_rows}=    Get From Dictionary    ${payload}    touched_rows
+    Should Be True    ${ok}    Nao foi possivel alterar celulas no grid por indices de linha.
+    Log
+    ...    [UAUXT-GRID] Preenchimento em lote aplicado. handle=${handle} coluna=${col_index} indices=${row_indexes_csv} tocadas=${touched_rows} valor='${value}' delays(ms)=move:${move_delay_ms},type:${type_delay_ms},commit:${commit_delay_ms}
+    ...    console=True
+    RETURN    ${payload}
+
+Alterar Celulas No Grid Processos Pagamento Por Indices De Linha
+    [Documentation]    Preenche coluna no grid de Processos de pagamento para lista de linhas (0-based).
+    [Arguments]    ${col_index}    ${value}
+    ...    ${move_delay_ms}=${UAUXT_GRID_BATCH_MOVE_DELAY_MS}
+    ...    ${type_delay_ms}=${UAUXT_GRID_BATCH_TYPE_DELAY_MS}
+    ...    ${commit_delay_ms}=${UAUXT_GRID_BATCH_COMMIT_DELAY_MS}
+    ...    @{row_indexes}
+    ${payload}=    Alterar Celulas No Grid UauXT Por Indices De Linha
+    ...    ${UAUXT_GRID_PROCESSOS_PAGAMENTO_TARGET_TEXT}
+    ...    ${col_index}
+    ...    ${value}
+    ...    ${UAUXT_GRID_PREFERRED_INDEX}
+    ...    ${move_delay_ms}
+    ...    ${type_delay_ms}
+    ...    ${commit_delay_ms}
+    ...    @{row_indexes}
+    RETURN    ${payload}
+
+Alterar Celulas No Grid Processos Pagamento Por Faixa De Linhas
+    [Documentation]    Preenche coluna no grid de Processos de pagamento para uma faixa inclusiva.
+    ...                Regra de base: se linha_inicial >= 1, interpreta como 1-based; se linha_inicial = 0, interpreta como 0-based.
+    ...                Commit via DOWN apos cada celula, inclusive a ultima, para garantir saida do modo edicao.
+    [Arguments]    ${col_index}    ${value}    ${linha_inicial}    ${linha_final}
+    ...    ${move_delay_ms}=${UAUXT_GRID_BATCH_MOVE_DELAY_MS}
+    ...    ${type_delay_ms}=${UAUXT_GRID_BATCH_TYPE_DELAY_MS}
+    ...    ${commit_delay_ms}=${UAUXT_GRID_BATCH_COMMIT_DELAY_MS}
+    ${inicio}=    Convert To Integer    ${linha_inicial}
+    ${fim}=    Convert To Integer    ${linha_final}
+    Should Be True    ${inicio} >= 0    linha_inicial deve ser >= 0.
+    Should Be True    ${fim} >= ${inicio}    linha_final deve ser >= linha_inicial.
+    ${usa_base_um}=    Evaluate    int($inicio) >= 1
+    ${inicio_0}=    Evaluate    int($inicio) - 1 if bool($usa_base_um) else int($inicio)
+    ${fim_0}=    Evaluate    int($fim) - 1 if bool($usa_base_um) else int($fim)
+    ${row_indexes}=    Evaluate    list(range(int($inicio_0), int($fim_0) + 1))
+    ${payload}=    Alterar Celulas No Grid Processos Pagamento Por Indices De Linha
+    ...    ${col_index}
+    ...    ${value}
+    ...    ${move_delay_ms}
+    ...    ${type_delay_ms}
+    ...    ${commit_delay_ms}
+    ...    @{row_indexes}
+    Log
+    ...    [UAUXT-GRID] Faixa recebida ${linha_inicial}..${linha_final} (base_um=${usa_base_um}) mapeada para indices 0-based ${inicio_0}..${fim_0}.
+    ...    console=True
+    RETURN    ${payload}
+
+Clicar Botao Da Celula No Grid UauXT
+    [Documentation]    Posiciona em uma celula do grid e clica no canto direito da celula.
+    [Arguments]    ${target_text}=${UAUXT_GRID_TARGET_TEXT}
+    ...    ${row_index}=0
+    ...    ${col_index}=13
+    ...    ${grid_index}=${UAUXT_GRID_PREFERRED_INDEX}
+    ...    ${interaction_mode}=right-corner-click
+    IF    '${interaction_mode}' == 'alt-down'
+        ${grid}=    Registrar Grid UauXT Por Win32    ${target_text}    ${grid_index}
+        ${handle}=    Get From Dictionary    ${grid}    handle
+        ${json_output}=    Executar Probe Grid UauXT
+        ...    click-cell-button
+        ...    --handle
+        ...    ${handle}
+        ...    --page-up-times
+        ...    1
+        ...    --row-index
+        ...    ${row_index}
+        ...    --col-index
+        ...    ${col_index}
+        ...    --interaction-mode
+        ...    alt-down
+        ${payload_alt}=    Parsear Payload Json Do Probe    ${json_output}
+        ${ok_alt}=    Get From Dictionary    ${payload_alt}    ok
+        Should Be True    ${ok_alt}    Nao foi possivel executar Alt+Down na celula alvo.
+        Log
+        ...    [UAUXT-GRID] Acao na celula executada via Alt+Down no probe. handle=${handle} linha=${row_index} coluna=${col_index}
+        ...    console=True
+        RETURN    ${payload_alt}
+    END
+    ${grid}=    Registrar Grid UauXT Por Win32    ${target_text}    ${grid_index}
+    ${handle}=    Get From Dictionary    ${grid}    handle
+    ${json_output}=    Executar Probe Grid UauXT
+    ...    click-cell-button
+    ...    --handle
+    ...    ${handle}
+    ...    --page-up-times
+    ...    1
+    ...    --row-index
+    ...    ${row_index}
+    ...    --col-index
+    ...    ${col_index}
+    ...    --interaction-mode
+    ...    ${interaction_mode}
+    ${payload}=    Parsear Payload Json Do Probe    ${json_output}
+    ${ok}=    Get From Dictionary    ${payload}    ok
+    Should Be True    ${ok}    Nao foi possivel acionar botao da celula no grid.
+    Log
+    ...    [UAUXT-GRID] Acao na celula executada. handle=${handle} linha=${row_index} coluna=${col_index} modo=${interaction_mode}
+    ...    console=True
+    RETURN    ${payload}
+
+Clicar Botao Da Celula No Grid Processos Pagamento
+    [Documentation]    Aciona botao de celula no grid fixo de Processos de pagamento.
+    [Arguments]    ${row_index}=0    ${col_index}=13    ${interaction_mode}=right-corner-click
+    ${payload}=    Clicar Botao Da Celula No Grid UauXT
+    ...    ${UAUXT_GRID_PROCESSOS_PAGAMENTO_TARGET_TEXT}
+    ...    ${row_index}
+    ...    ${col_index}
+    ...    ${UAUXT_GRID_PREFERRED_INDEX}
+    ...    ${interaction_mode}
+    RETURN    ${payload}
+
+Ciclar Opcao Da Celula No Grid Processos Pagamento
+    [Documentation]    Posiciona na celula alvo do grid e envia Alt+Seta para baixo para ciclar/abrir opcoes.
+    [Arguments]    ${row_index}=0    ${col_index}=13
+    ${payload}=    Clicar Botao Da Celula No Grid Processos Pagamento
+    ...    ${row_index}
+    ...    ${col_index}
+    ...    alt-down
+    RETURN    ${payload}
+
 Ler Preview De Linhas Do Grid Por Handle
     [Documentation]    Le linhas do grid por handle usando Ctrl+A/Ctrl+C e clipboard.
     [Arguments]    ${grid_handle}    ${max_rows}=${UAUXT_GRID_MAX_ROWS_PREVIEW}    ${page_downs}=0

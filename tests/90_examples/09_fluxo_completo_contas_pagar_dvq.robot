@@ -6,10 +6,12 @@ Test Tags           examples    uauxt    contas-pagar    dvq    fluxo-completo
 
 
 *** Variables ***
-${EMPRESA_PADRAO}                    7168
+${EMPRESA_PADRAO}                    262
 ${DATA_INICIAL_PADRAO}               01/01/2022
 ${COLUNA_CONFIRMADO}                 5
 ${VALOR_CONFIRMADO}                  DVQ
+${LINHA_INICIAL_DVQ}                 0
+${LINHA_FINAL_DVQ}                   1
 
 
 *** Test Cases ***
@@ -17,7 +19,7 @@ Exemplo Fluxo Completo Contas Pagar Com DVQ
     [Documentation]    Abre/loga no UauXT, acessa Contas a Pagar, filtra dados e preenche DVQ.
     Log    [EXEMPLO] Iniciando fluxo completo (login > menu > filtro > DVQ)...    console=True
     Abrir E Logar No UauXT
-    Pausa Controlada    35s    Aguardando carregamento completo apos login 
+    Pausa Controlada    10s    Aguardando carregamento completo apos login
     Acessar Contas A Pagar Via Icone Capacete Obras
     Selecionar Empresa E Obra
     Selecionar Empresa No Popup    ${EMPRESA_PADRAO}
@@ -62,16 +64,7 @@ Configurar Periodo Prorrogacao
 Aguardar Campos Periodo Prorrogacao
     [Documentation]    Aguarda e resolve locator do campo de data (inicial/final), com fallback entre versões.
     [Arguments]    ${tipo_campo}=inicial    ${timeout}=5s
-    Log    [CONTAS_PAGAR] Resolvendo campo de data '${tipo_campo}'...    console=True
-    ${popup_aberto}=    Run Keyword And Return Status
-    ...    Control Window    id:frmSelecaoEmpresaObra and type:WindowControl
-    IF    ${popup_aberto}
-        Log    [CONTAS_PAGAR] Popup de empresa/obra ainda aberto. Confirmando selecao para voltar ao formulario...    console=True
-        Send Keys    keys={ENTER}
-        Pausa Controlada    700ms    Aguardando fechamento do popup de empresa/obra
-    END
-    Wait Until Keyword Succeeds    ${timeout}    500ms
-    ...    Control Window    id:MainView and type:WindowControl
+    Log    [CONTAS_PAGAR] Resolvendo campo de data '${tipo_campo}' (timeout=${timeout})...    console=True
     @{locators}=    Obter Locators Campo Data    ${tipo_campo}
     FOR    ${locator}    IN    @{locators}
         ${ok}=    Run Keyword And Return Status
@@ -81,7 +74,10 @@ Aguardar Campos Periodo Prorrogacao
             RETURN    ${locator}
         END
     END
-    Log    [CONTAS_PAGAR] Nao foi possivel localizar campo '${tipo_campo}'. Dump de arvore para diagnostico.    console=True
+    Log
+    ...    [CONTAS_PAGAR] Nao foi possivel localizar campo '${tipo_campo}'.
+    ...    Dump de arvore para diagnostico.
+    ...    console=True
     Print Tree    id:MainView and type:WindowControl    max_depth=16    log_as_warnings=True
     Fail    Campo de data '${tipo_campo}' nao localizado. Revise locators desta tela.
 
@@ -136,13 +132,16 @@ Resolver Locator Botao Buscar
     Fail    Botao Buscar nao localizado com os locators candidatos.
 
 Preencher DVQ Nas Duas Primeiras Linhas
-    [Documentation]    Preenche valor na coluna Confirmado (5) nas linhas 1 e 2 do grid de Processos de pagamento.
+    [Documentation]    Preenche DVQ na coluna Confirmado para uma faixa de linhas (0-based, inclusiva).
     [Arguments]    ${valor}=${VALOR_CONFIRMADO}
-    ${payload_linha_1}=    Alterar Celula No Grid Processos Pagamento    0    ${COLUNA_CONFIRMADO}    ${valor}
-    ${ok_linha_1}=    Get From Dictionary    ${payload_linha_1}    ok
-    Should Be True    ${ok_linha_1}    Preenchimento na linha 1 falhou.
-    ${payload_linha_2}=    Alterar Celula No Grid Processos Pagamento    1    ${COLUNA_CONFIRMADO}    ${valor}
-    ${ok_linha_2}=    Get From Dictionary    ${payload_linha_2}    ok
-    Should Be True    ${ok_linha_2}    Preenchimento na linha 2 falhou.
-
-
+    ...    ${linha_inicial}=${LINHA_INICIAL_DVQ}
+    ...    ${linha_final}=${LINHA_FINAL_DVQ}
+    ${payload}=    Alterar Celulas No Grid Processos Pagamento Por Faixa De Linhas
+    ...    ${COLUNA_CONFIRMADO}
+    ...    ${valor}
+    ...    ${linha_inicial}
+    ...    ${linha_final}
+    ${ok}=    Get From Dictionary    ${payload}    ok
+    Should Be True
+    ...    ${ok}
+    ...    Preenchimento em lote de DVQ falhou para faixa ${linha_inicial}..${linha_final}.

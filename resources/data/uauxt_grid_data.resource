@@ -24,3 +24,6 @@ ${UAUXT_GRID_LEFT}                        ${EMPTY}
 ${UAUXT_GRID_TOP}                         ${EMPTY}
 ${UAUXT_GRID_RIGHT}                       ${EMPTY}
 ${UAUXT_GRID_BOTTOM}                      ${EMPTY}
+${UAUXT_GRID_BATCH_MOVE_DELAY_MS}         300
+${UAUXT_GRID_BATCH_TYPE_DELAY_MS}         250
+${UAUXT_GRID_BATCH_COMMIT_DELAY_MS}       350

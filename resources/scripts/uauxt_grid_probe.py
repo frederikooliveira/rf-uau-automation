@@ -437,6 +437,219 @@ def set_grid_cell(
     return data
 
 
+def fill_grid_cells_by_row_indexes(
+    handle: int,
+    page_up_times: int,
+    col_index: int,
+    row_indexes: Sequence[int],
+    value: str,
+    move_delay_ms: int,
+    type_delay_ms: int,
+    commit_delay_ms: int,
+) -> Dict[str, Any]:
+    ctrl = _connect_by_handle(handle)
+
+    col_index_1 = max(1, int(col_index))
+    text_value = str(value)
+    normalized = sorted({max(0, int(idx)) for idx in row_indexes})
+    if not normalized:
+        raise ValueError("row_indexes deve conter ao menos um indice de linha.")
+
+    move_delay_s = max(0.0, float(move_delay_ms) / 1000.0)
+    type_delay_s = max(0.0, float(type_delay_ms) / 1000.0)
+    commit_delay_s = max(0.0, float(commit_delay_ms) / 1000.0)
+
+    _safe(ctrl.set_focus)
+    _safe(ctrl.click_input)
+    time.sleep(0.15)
+
+    _send_key_repeat("PGUP", max(1, int(page_up_times)), delay_s=0.12)
+    keyboard.send_keys("{HOME}")
+    time.sleep(0.08)
+
+    first_row = normalized[0]
+    if first_row > 0:
+        _send_key_repeat("DOWN", first_row)
+
+    if col_index_1 > 1:
+        _send_key_repeat("RIGHT", col_index_1 - 1)
+
+    current_pointer = first_row
+    touched_rows: List[int] = []
+    total_targets = len(normalized)
+
+    for idx, target_row in enumerate(normalized):
+        while current_pointer < target_row:
+            keyboard.send_keys("{DOWN}")
+            current_pointer += 1
+            time.sleep(move_delay_s)
+
+        keyboard.send_keys(text_value, with_spaces=True, pause=0.02)
+        time.sleep(type_delay_s)
+        touched_rows.append(target_row)
+
+        # DOWN confirma o valor digitado e posiciona na proxima linha.
+        # Enviado sempre, inclusive apos a ultima celula, para garantir que
+        # a celula saia do modo edicao antes do processo encerrar.
+        keyboard.send_keys("{DOWN}")
+        current_pointer += 1
+        time.sleep(commit_delay_s)
+
+    return {
+        "ok": True,
+        "handle": handle,
+        "action": "fill-grid-indexes",
+        "page_up_times": max(1, int(page_up_times)),
+        "col_index": col_index_1,
+        "row_indexes": normalized,
+        "touched_rows": touched_rows,
+        "rows_count": len(normalized),
+        "value": text_value,
+        "commit_strategy": "always-down",
+        "move_delay_ms": int(move_delay_ms),
+        "type_delay_ms": int(type_delay_ms),
+        "commit_delay_ms": int(commit_delay_ms),
+    }
+
+
+def click_grid_cell_button(
+    handle: int,
+    page_up_times: int,
+    row_index: int,
+    col_index: int,
+    interaction_mode: str,
+) -> Dict[str, Any]:
+    ctrl = _connect_by_handle(handle)
+
+    row_index_0 = max(0, int(row_index))
+    col_index_1 = max(1, int(col_index))
+    mode = str(interaction_mode or "right-corner-click").strip().lower()
+    if mode not in ("right-corner-click", "alt-down"):
+        raise ValueError("interaction_mode deve ser 'right-corner-click' ou 'alt-down'.")
+
+    _safe(ctrl.set_focus)
+    _safe(ctrl.click_input)
+    time.sleep(0.15)
+
+    _send_key_repeat("PGUP", max(1, int(page_up_times)), delay_s=0.12)
+    keyboard.send_keys("{HOME}")
+    time.sleep(0.08)
+
+    if row_index_0 > 0:
+        _send_key_repeat("DOWN", row_index_0)
+
+    if col_index_1 > 1:
+        _send_key_repeat("RIGHT", col_index_1 - 1)
+
+    click_x = 0
+    click_y = 0
+    click_error = ""
+    click_ok = True
+
+    if mode == "right-corner-click":
+        rect = _safe(ctrl.rectangle, None)
+        if not rect:
+            raise RuntimeError("Nao foi possivel obter retangulo do grid para clique por coordenada.")
+
+        grid_width = max(1, int(rect.right) - int(rect.left))
+        grid_height = max(1, int(rect.bottom) - int(rect.top))
+        cell_width = max(1, int(grid_width / max(col_index_1, 1)))
+        cell_height = max(1, min(26, int(grid_height / max(row_index_0 + 12, 12))))
+        click_x = max(6, int(col_index_1 * cell_width) - 6)
+        click_y = max(10, int(24 + (row_index_0 * cell_height) + (cell_height / 2)))
+
+        time.sleep(0.08)
+        try:
+            ctrl.click_input(coords=(click_x, click_y))
+        except Exception as exc:
+            click_ok = False
+            click_error = str(exc)
+        time.sleep(0.10)
+    else:
+        time.sleep(0.08)
+        try:
+            keyboard.send_keys("%{DOWN}")
+        except Exception as exc:
+            click_ok = False
+            click_error = str(exc)
+        time.sleep(0.10)
+
+    return {
+        "ok": bool(click_ok),
+        "handle": handle,
+        "action": "click-cell-button",
+        "page_up_times": max(1, int(page_up_times)),
+        "row_index": row_index_0,
+        "col_index": col_index_1,
+        "interaction_mode": mode,
+        "click_x": int(click_x),
+        "click_y": int(click_y),
+        "click_ok": bool(click_ok),
+        "error": click_error,
+    }
+
+
+def get_grid_cell_value(
+    handle: int,
+    page_up_times: int,
+    row_index: int,
+    col_index: int,
+) -> Dict[str, Any]:
+    ctrl = _connect_by_handle(handle)
+
+    row_index_0 = max(0, int(row_index))
+    col_index_1 = max(1, int(col_index))
+
+    _safe(ctrl.set_focus)
+    _safe(ctrl.click_input)
+    time.sleep(0.15)
+
+    _send_key_repeat("PGUP", max(1, int(page_up_times)), delay_s=0.12)
+    keyboard.send_keys("{HOME}")
+    time.sleep(0.08)
+
+    if row_index_0 > 0:
+        _send_key_repeat("DOWN", row_index_0)
+    if col_index_1 > 1:
+        _send_key_repeat("RIGHT", col_index_1 - 1)
+
+    time.sleep(0.15)
+
+    # Entra em modo edicao para expor o valor no campo de edicao, depois copia.
+    previous_raw = _safe(clipboard.GetData, "") or ""
+    keyboard.send_keys("{F2}")
+    time.sleep(0.20)
+    keyboard.send_keys("^a")
+    time.sleep(0.08)
+    keyboard.send_keys("^c")
+    time.sleep(0.25)
+
+    raw = str(_safe(clipboard.GetData, "") or "")
+    # Se nada mudou no clipboard, tenta direto sem F2.
+    if not raw.strip() or raw.strip() == str(previous_raw).strip():
+        keyboard.send_keys("{ESCAPE}")
+        time.sleep(0.12)
+        keyboard.send_keys("^c")
+        time.sleep(0.25)
+        raw = str(_safe(clipboard.GetData, "") or "")
+
+    # Cancela edicao sem alterar valor.
+    keyboard.send_keys("{ESCAPE}")
+    time.sleep(0.10)
+
+    cell_value = raw.strip().splitlines()[0].strip() if raw.strip() else ""
+
+    return {
+        "ok": True,
+        "handle": handle,
+        "action": "get-cell",
+        "row_index": row_index_0,
+        "col_index": col_index_1,
+        "value": cell_value,
+        "raw": raw.strip(),
+    }
+
+
 def refresh_grid_footer_via_caption(handle: int, page_up_times: int) -> Dict[str, Any]:
     ctrl = _connect_by_handle(handle)
 
@@ -517,6 +730,13 @@ def _parse_tokens(raw: str) -> List[str]:
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
+def _parse_row_indexes(raw: str) -> List[int]:
+    if not raw:
+        return []
+    parts = [part.strip() for part in str(raw).split(",") if part.strip()]
+    return [int(part) for part in parts]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Probe de grid UauXT por pywinauto")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -560,6 +780,32 @@ def main() -> int:
     parser_set.add_argument("--col-index", type=int, required=True)
     parser_set.add_argument("--value", required=True)
     parser_set.add_argument("--pretty", action="store_true")
+
+    parser_indexes = subparsers.add_parser("fill-grid-indexes", help="Preenche valor em coluna para lista de indices de linha")
+    parser_indexes.add_argument("--handle", type=int, required=True)
+    parser_indexes.add_argument("--page-up-times", type=int, default=1)
+    parser_indexes.add_argument("--col-index", type=int, required=True)
+    parser_indexes.add_argument("--row-indexes", required=True)
+    parser_indexes.add_argument("--value", required=True)
+    parser_indexes.add_argument("--move-delay-ms", type=int, default=120)
+    parser_indexes.add_argument("--type-delay-ms", type=int, default=80)
+    parser_indexes.add_argument("--commit-delay-ms", type=int, default=350)
+    parser_indexes.add_argument("--pretty", action="store_true")
+
+    parser_get = subparsers.add_parser("get-cell", help="Le valor de uma celula especifica (linha/coluna) via clipboard")
+    parser_get.add_argument("--handle", type=int, required=True)
+    parser_get.add_argument("--page-up-times", type=int, default=1)
+    parser_get.add_argument("--row-index", type=int, required=True)
+    parser_get.add_argument("--col-index", type=int, required=True)
+    parser_get.add_argument("--pretty", action="store_true")
+
+    parser_click = subparsers.add_parser("click-cell-button", help="Navega para celula e aciona botao da celula")
+    parser_click.add_argument("--handle", type=int, required=True)
+    parser_click.add_argument("--page-up-times", type=int, default=1)
+    parser_click.add_argument("--row-index", type=int, required=True)
+    parser_click.add_argument("--col-index", type=int, required=True)
+    parser_click.add_argument("--interaction-mode", default="right-corner-click")
+    parser_click.add_argument("--pretty", action="store_true")
 
     parser_refresh = subparsers.add_parser("refresh-footer", help="Atualiza rodape via caption (HOME + UP + duplo clique)")
     parser_refresh.add_argument("--handle", type=int, required=True)
@@ -622,6 +868,41 @@ def main() -> int:
                 row_index=int(args.row_index),
                 col_index=int(args.col_index),
                 value=args.value,
+            )
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "fill-grid-indexes":
+            data = fill_grid_cells_by_row_indexes(
+                handle=int(args.handle),
+                page_up_times=int(args.page_up_times),
+                col_index=int(args.col_index),
+                row_indexes=_parse_row_indexes(args.row_indexes),
+                value=args.value,
+                move_delay_ms=int(args.move_delay_ms),
+                type_delay_ms=int(args.type_delay_ms),
+                commit_delay_ms=int(args.commit_delay_ms),
+            )
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "get-cell":
+            data = get_grid_cell_value(
+                handle=int(args.handle),
+                page_up_times=int(args.page_up_times),
+                row_index=int(args.row_index),
+                col_index=int(args.col_index),
+            )
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "click-cell-button":
+            data = click_grid_cell_button(
+                handle=int(args.handle),
+                page_up_times=int(args.page_up_times),
+                row_index=int(args.row_index),
+                col_index=int(args.col_index),
+                interaction_mode=args.interaction_mode,
             )
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1
