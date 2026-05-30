@@ -1,1 +1,1 @@
-{"ok": true, "handle": 658286, "action": "click-cell-button", "page_up_times": 1, "row_index": 0, "col_index": 1, "interaction_mode": "double-click", "click_x": 882, "click_y": 37, "click_ok": true, "error": ""}
+{"ok": true, "action": "click-toolbar-button", "button_index": 8, "button_count": 19, "toolbar_handle": 1837982, "button_rect_client": [515, 0, 612, 46], "click_screen": [2950, 246]}

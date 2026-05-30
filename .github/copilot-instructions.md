@@ -44,7 +44,7 @@ Dependencias entre camadas:
 
 ## Politica de scripts Python
 
-- Script oficial de suporte ao grid: resources/scripts/uauxt_grid_probe.py
+- Script oficial de suporte ao grid: resources/scripts/uauxt_probe.py
 - Nao manter no repositorio scripts temporarios de debug (`tmp_*`, `diagnostico_*`) sem uso real nos resources/tests.
 
 ## Checklist minimo antes de sugerir mudancas

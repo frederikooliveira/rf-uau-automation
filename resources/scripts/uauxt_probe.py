@@ -1,9 +1,14 @@
-"""Probe de grid UauXT baseado em Win32/pywinauto.
+"""Probe Win32/pywinauto para automacao de componentes nativos do UauXT.
 
-Objetivo:
-- Descobrir o componente de grid por classe/parent chain.
-- Registrar metadados estaveis (handle, rect, class, depth).
-- Ler linhas por atalho de teclado + clipboard (fallback robusto).
+Seções:
+  GRID     -- Descoberta, leitura e interação com grids TG80/C1Grid/GridOleDB.
+  TOOLBAR  -- Clique em botões de toolbar VB6 (msvb_lib_toolbar) via TB_GETITEMRECT.
+
+Convenções:
+- Cada seção é demarcada por um banner de linha.  Se o arquivo crescer muito
+  (ex: treeview, menus nativos), extrair a seção para um módulo dedicado.
+- Todas as funções públicas retornam Dict[str, Any] com chave 'ok' (bool).
+- Helpers internos usam prefixo '_' e não devem ser chamados diretamente.
 """
 
 from __future__ import annotations
@@ -14,6 +19,8 @@ import re
 import sys
 import time
 import warnings
+import ctypes
+import ctypes.wintypes
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -30,6 +37,10 @@ warnings.filterwarnings(
 DEFAULT_TOKENS = ("TG80", "C1Grid", "GridOleDB", "grid")
 DEFAULT_MAX_DEPTH = 30
 DEFAULT_MAX_NODES = 4000
+
+# ════════════════════════════════════════════════════════════════════════════════
+# GRID  --  TG80 / C1Grid / GridOleDB
+# ════════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
@@ -524,8 +535,8 @@ def click_grid_cell_button(
     row_index_0 = max(0, int(row_index))
     col_index_1 = max(1, int(col_index))
     mode = str(interaction_mode or "right-corner-click").strip().lower()
-    if mode not in ("right-corner-click", "alt-down", "double-click"):
-        raise ValueError("interaction_mode deve ser 'right-corner-click', 'alt-down' ou 'double-click'.")
+    if mode not in ("right-corner-click", "alt-down", "double-click", "select-row", "check-row"):
+        raise ValueError("interaction_mode deve ser 'right-corner-click', 'alt-down', 'double-click', 'select-row' ou 'check-row'.")
 
     _safe(ctrl.set_focus)
     _safe(ctrl.click_input)
@@ -583,6 +594,42 @@ def click_grid_cell_button(
             click_ok = False
             click_error = str(exc)
         time.sleep(0.20)
+    elif mode == "select-row":
+        rect = _safe(ctrl.rectangle, None)
+        if not rect:
+            raise RuntimeError("Nao foi possivel obter retangulo do grid para selecionar linha por coordenada.")
+
+        grid_width = max(1, int(rect.right) - int(rect.left))
+        grid_height = max(1, int(rect.bottom) - int(rect.top))
+        cell_height = max(1, min(26, int(grid_height / max(row_index_0 + 12, 12))))
+        click_x = max(6, int(grid_width / 4))
+        click_y = max(10, int(24 + (row_index_0 * cell_height) + (cell_height / 2)))
+
+        time.sleep(0.08)
+        try:
+            ctrl.click_input(coords=(click_x, click_y))
+        except Exception as exc:
+            click_ok = False
+            click_error = str(exc)
+        time.sleep(0.10)
+    elif mode == "check-row":
+        # Clica na coluna 0 (seletor/checkbox do grid) — x fixo proximo a borda esquerda.
+        rect = _safe(ctrl.rectangle, None)
+        if not rect:
+            raise RuntimeError("Nao foi possivel obter retangulo do grid para check-row.")
+
+        grid_height = max(1, int(rect.bottom) - int(rect.top))
+        cell_height = max(1, min(26, int(grid_height / max(row_index_0 + 12, 12))))
+        click_x = 10  # coluna 0 (checkbox/seletor) sempre no canto esquerdo
+        click_y = max(10, int(24 + (row_index_0 * cell_height) + (cell_height / 2)))
+
+        time.sleep(0.08)
+        try:
+            ctrl.click_input(coords=(click_x, click_y))
+        except Exception as exc:
+            click_ok = False
+            click_error = str(exc)
+        time.sleep(0.10)
     else:
         time.sleep(0.08)
         try:
@@ -666,6 +713,478 @@ def get_grid_cell_value(
         "value": cell_value,
         "raw": raw.strip(),
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# TOOLBAR  --  msvb_lib_toolbar (VB6 ActiveX)
+# Botoes VB6 nao expoe nomes via UIA/MSAA/TB_GETBUTTONTEXTW.
+# Identificar botoes pelo indice 0-based (TB_GETITEMRECT cross-process).
+# Indices mapeados em resources/data/*_data.resource.
+# ════════════════════════════════════════════════════════════════════════════════
+
+def list_controls(class_filter: str = "", text_filter: str = "") -> Dict[str, Any]:
+    """Enumera todos os controles filhos da janela UauXT ativa.
+
+    Uso: executar como subcomando 'list-controls' para descobrir classes de controles
+    (toolbars verticais, panels, tabs, etc.) em qualquer tela do UauXT.
+    Retorna lista de controles com handle, class_name, text, rect e screen_rect.
+    """
+    EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+    _app, main_win = _connect_uauxt_window()
+    root_hwnd = main_win.handle
+
+    controls: List[Dict[str, Any]] = []
+    cf_lower = class_filter.lower()
+    tf_lower = text_filter.lower()
+
+    def _enum_cb(hwnd: int, _lparam: int) -> bool:
+        cls_buf = ctypes.create_unicode_buffer(256)
+        ctypes.windll.user32.GetClassNameW(hwnd, cls_buf, 256)
+        cls = cls_buf.value
+
+        txt_buf = ctypes.create_unicode_buffer(512)
+        ctypes.windll.user32.GetWindowTextW(hwnd, txt_buf, 512)
+        txt = txt_buf.value.strip()
+
+        if cf_lower and cf_lower not in cls.lower():
+            return True
+        if tf_lower and tf_lower not in txt.lower():
+            return True
+
+        rect = ctypes.wintypes.RECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+        w = rect.right - rect.left
+        h = rect.bottom - rect.top
+
+        is_visible = bool(ctypes.windll.user32.IsWindowVisible(hwnd))
+        is_enabled = bool(ctypes.windll.user32.IsWindowEnabled(hwnd))
+
+        controls.append({
+            "handle": hwnd,
+            "class_name": cls,
+            "text": txt,
+            "screen_rect": [rect.left, rect.top, rect.right, rect.bottom],
+            "size": [w, h],
+            "visible": is_visible,
+            "enabled": is_enabled,
+        })
+        return True
+
+    cb = EnumChildProc(_enum_cb)
+    ctypes.windll.user32.EnumChildWindows(root_hwnd, cb, 0)
+
+    # Agrupa por class_name para facilitar análise
+    by_class: Dict[str, int] = {}
+    for c in controls:
+        by_class[c["class_name"]] = by_class.get(c["class_name"], 0) + 1
+
+    return {
+        "ok": True,
+        "total": len(controls),
+        "classes_summary": dict(sorted(by_class.items(), key=lambda x: -x[1])),
+        "controls": controls,
+    }
+
+
+def list_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar") -> Dict[str, Any]:
+    """Descobre todas as toolbars da janela UauXT e retorna index + rect de cada botao.
+
+    Uso: executar como subcomando 'list-toolbar-buttons' para mapear indices de botoes
+    em qualquer tela do UauXT que contenha toolbar da classe msvb_lib_toolbar.
+    Retorna lista de toolbars; cada toolbar tem 'buttons' com index, client_rect e screen_center.
+    """
+    TB_BUTTONCOUNT = 0x418
+    TB_GETITEMRECT = 0x41D
+    MEM_COMMIT = 0x1000
+    MEM_RESERVE = 0x2000
+    PAGE_READWRITE = 0x04
+    MEM_RELEASE = 0x8000
+    PROCESS_ALL_ACCESS = 0x001F0FFF
+
+    EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+    _app, main_win = _connect_uauxt_window()
+
+    toolbar_handles: List[int] = []
+
+    def _enum_cb(hwnd: int, _lparam: int) -> bool:
+        buf = ctypes.create_unicode_buffer(256)
+        ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+        if buf.value == toolbar_class:
+            toolbar_handles.append(hwnd)
+        return True
+
+    ctypes.windll.user32.EnumChildWindows(main_win.handle, EnumChildProc(_enum_cb), 0)
+
+    if not toolbar_handles:
+        return {"ok": False, "action": "list-toolbar-buttons", "error": f"Nenhuma toolbar '{toolbar_class}' encontrada."}
+
+    import struct as _struct
+
+    def _get_rect(hwnd: int):
+        class WRECT(ctypes.Structure):
+            _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long), ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+        r = WRECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+        return r.left, r.top, r.right, r.bottom
+
+    toolbars_result = []
+    for tb_handle in toolbar_handles:
+        tb_l, tb_t, tb_r, tb_b = _get_rect(tb_handle)
+        btn_count = ctypes.windll.user32.SendMessageW(tb_handle, TB_BUTTONCOUNT, 0, 0)
+
+        pid = ctypes.wintypes.DWORD()
+        ctypes.windll.user32.GetWindowThreadProcessId(tb_handle, ctypes.byref(pid))
+        h_proc = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid.value)
+        remote_rect = ctypes.windll.kernel32.VirtualAllocEx(h_proc, None, 16, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)
+
+        buttons = []
+        for i in range(btn_count):
+            ctypes.windll.user32.SendMessageW(tb_handle, TB_GETITEMRECT, i, remote_rect)
+            local_rect_b = (ctypes.c_byte * 16)()
+            ctypes.windll.kernel32.ReadProcessMemory(h_proc, remote_rect, local_rect_b, 16, None)
+            bl, bt, br, bb = _struct.unpack_from("<iiii", bytes(local_rect_b), 0)
+            w = br - bl
+            buttons.append({
+                "index": i,
+                "client_rect": [bl, bt, br, bb],
+                "screen_center": [tb_l + (bl + br) // 2, tb_t + (bt + bb) // 2],
+                "width_px": w,
+                "is_separator": w < 15,
+            })
+
+        ctypes.windll.kernel32.VirtualFreeEx(h_proc, remote_rect, 0, MEM_RELEASE)
+        ctypes.windll.kernel32.CloseHandle(h_proc)
+
+        toolbars_result.append({
+            "handle": tb_handle,
+            "screen_rect": [tb_l, tb_t, tb_r, tb_b],
+            "button_count": btn_count,
+            "buttons": buttons,
+        })
+
+    return {"ok": True, "action": "list-toolbar-buttons", "toolbar_class": toolbar_class, "toolbars": toolbars_result}
+
+
+def map_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar", hover_delay_s: float = 0.9, toolbar_index: int = 0) -> Dict[str, Any]:
+    """Mapeia nomes dos botoes da toolbar fazendo hover com o mouse e lendo o tooltip VB6.
+
+    Para cada botao nao-separador:
+      1. SetForegroundWindow na janela UauXT
+      2. SetCursorPos para o screen_center do botao
+      3. Aguarda hover_delay_s para o tooltip aparecer
+      4. Enumera todas as janelas top-level e child buscando tooltips visiveis:
+           - Classe "msvb_lib_tooltips" (tooltip nativo VB6)
+           - Classe "tooltips_class32" (tooltip Windows padrao)
+      5. Tenta ler o texto via GetWindowTextW e WM_GETTEXT
+      6. Registra index -> nome (ou "?" se nao detectado)
+
+    Util para auto-mapear indices de toolbar em qualquer tela do UauXT.
+    """
+    TB_BUTTONCOUNT = 0x418
+    TB_GETITEMRECT = 0x41D
+    MEM_COMMIT  = 0x1000
+    MEM_RESERVE = 0x2000
+    PAGE_READWRITE = 0x04
+    MEM_RELEASE = 0x8000
+    PROCESS_ALL_ACCESS = 0x001F0FFF
+    WM_GETTEXT       = 0x000D
+    WM_GETTEXTLENGTH = 0x000E
+    TOOLTIP_CLASSES  = ("msvb_lib_tooltips", "tooltips_class32", "ToolTips_class32")
+
+    EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+    EnumWndProc   = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+    _app, main_win = _connect_uauxt_window()
+
+    # --- Localiza toolbars ---
+    toolbar_handles: List[int] = []
+
+    def _enum_tb(hwnd: int, _: int) -> bool:
+        buf = ctypes.create_unicode_buffer(256)
+        ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+        if buf.value == toolbar_class:
+            toolbar_handles.append(hwnd)
+        return True
+
+    ctypes.windll.user32.EnumChildWindows(main_win.handle, EnumChildProc(_enum_tb), 0)
+    if not toolbar_handles:
+        return {"ok": False, "action": "map-toolbar-buttons", "error": f"Nenhuma toolbar '{toolbar_class}' encontrada."}
+
+    import struct as _struct
+
+    def _get_rect(hwnd: int):
+        class WRECT(ctypes.Structure):
+            _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long), ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+        r = WRECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+        return r.left, r.top, r.right, r.bottom
+
+    # Ordena toolbars por area (largura * altura) decrescente: maior = indice 0, etc.
+    def _area(hwnd: int) -> int:
+        l, t, r, b = _get_rect(hwnd)
+        return (r - l) * (b - t)
+
+    toolbar_handles_sorted = sorted(toolbar_handles, key=_area, reverse=True)
+
+    if toolbar_index >= len(toolbar_handles_sorted):
+        return {
+            "ok": False,
+            "action": "map-toolbar-buttons",
+            "error": f"toolbar_index={toolbar_index} invalido — apenas {len(toolbar_handles_sorted)} toolbar(s) '{toolbar_class}' encontrada(s).",
+            "available_count": len(toolbar_handles_sorted),
+        }
+
+    selected_handle = toolbar_handles_sorted[toolbar_index]
+    def _read_tooltip_text() -> str:
+        candidates: List[int] = []
+
+        def _enum_top(hwnd: int, _: int) -> bool:
+            candidates.append(hwnd)
+            return True
+
+        ctypes.windll.user32.EnumWindows(EnumWndProc(_enum_top), 0)
+
+        for hwnd in candidates:
+            cls_buf = ctypes.create_unicode_buffer(128)
+            ctypes.windll.user32.GetClassNameW(hwnd, cls_buf, 128)
+            if cls_buf.value not in TOOLTIP_CLASSES:
+                continue
+            if not ctypes.windll.user32.IsWindowVisible(hwnd):
+                continue
+
+            # Metodo 1: GetWindowTextW
+            tlen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+            if tlen > 0:
+                tbuf = ctypes.create_unicode_buffer(tlen + 2)
+                ctypes.windll.user32.GetWindowTextW(hwnd, tbuf, tlen + 2)
+                if tbuf.value.strip():
+                    return tbuf.value.strip()
+
+            # Metodo 2: WM_GETTEXTLENGTH + WM_GETTEXT
+            wlen = ctypes.windll.user32.SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0)
+            if wlen > 0:
+                wbuf = ctypes.create_unicode_buffer(wlen + 2)
+                ctypes.windll.user32.SendMessageW(hwnd, WM_GETTEXT, wlen + 2, wbuf)
+                if wbuf.value.strip():
+                    return wbuf.value.strip()
+
+            # Metodo 3: varrer janelas filhas da tooltip
+            child_hwnds: List[int] = []
+
+            def _enum_child_tt(child_hwnd: int, _: int) -> bool:
+                child_hwnds.append(child_hwnd)
+                return True
+
+            ctypes.windll.user32.EnumChildWindows(hwnd, EnumChildProc(_enum_child_tt), 0)
+            for child in child_hwnds:
+                clen = ctypes.windll.user32.GetWindowTextLengthW(child)
+                if clen > 0:
+                    cbuf = ctypes.create_unicode_buffer(clen + 2)
+                    ctypes.windll.user32.GetWindowTextW(child, cbuf, clen + 2)
+                    if cbuf.value.strip():
+                        return cbuf.value.strip()
+
+        return ""
+
+    tb_handle = selected_handle
+    tb_l, tb_t, tb_r, tb_b = _get_rect(tb_handle)
+    btn_count = ctypes.windll.user32.SendMessageW(tb_handle, TB_BUTTONCOUNT, 0, 0)
+
+    pid = ctypes.wintypes.DWORD()
+    ctypes.windll.user32.GetWindowThreadProcessId(tb_handle, ctypes.byref(pid))
+    h_proc = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid.value)
+    remote_rect = ctypes.windll.kernel32.VirtualAllocEx(h_proc, None, 16, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)
+
+    ctypes.windll.user32.SetForegroundWindow(main_win.handle)
+    time.sleep(0.3)
+
+    mapping = []
+    try:
+        for i in range(btn_count):
+            ctypes.windll.user32.SendMessageW(tb_handle, TB_GETITEMRECT, i, remote_rect)
+            local_rect_b = (ctypes.c_byte * 16)()
+            ctypes.windll.kernel32.ReadProcessMemory(h_proc, remote_rect, local_rect_b, 16, None)
+            bl, bt, br, bb = _struct.unpack_from("<iiii", bytes(local_rect_b), 0)
+            w  = br - bl
+            cx = tb_l + (bl + br) // 2
+            cy = tb_t + (bt + bb) // 2
+
+            if w < 15:
+                mapping.append({"index": i, "name": "---SEPARADOR---", "is_separator": True, "screen_center": [cx, cy]})
+                continue
+
+            # Hover e leitura do tooltip
+            ctypes.windll.user32.SetCursorPos(cx, cy)
+            time.sleep(hover_delay_s)
+            name = _read_tooltip_text()
+
+            mapping.append({
+                "index": i,
+                "name": name if name else "?",
+                "name_found": bool(name),
+                "is_separator": False,
+                "screen_center": [cx, cy],
+                "width_px": w,
+            })
+    finally:
+        ctypes.windll.kernel32.VirtualFreeEx(h_proc, remote_rect, 0, MEM_RELEASE)
+        ctypes.windll.kernel32.CloseHandle(h_proc)
+
+    # Move mouse para fora da toolbar ao terminar
+    ctypes.windll.user32.SetCursorPos(tb_l - 50, tb_t)
+
+    mapped_count = sum(1 for b in mapping if not b.get("is_separator") and b.get("name_found"))
+    total_buttons = sum(1 for b in mapping if not b.get("is_separator"))
+
+    return {
+        "ok": True,
+        "action": "map-toolbar-buttons",
+        "toolbar_handle": tb_handle,
+        "button_count": btn_count,
+        "mapped": mapped_count,
+        "total_buttons": total_buttons,
+        "hover_delay_s": hover_delay_s,
+        "mapping": mapping,
+    }
+
+
+def click_toolbar_button(button_index: int, toolbar_class: str = "msvb_lib_toolbar", click_x_pct: float = 0.5) -> Dict[str, Any]:
+    """Clica em botao de toolbar VB6 (msvb_lib_toolbar) pelo indice (0-based).
+
+    A toolbar VB6 (msvb_lib_toolbar) nao expoe nomes de botoes via UIA, MSAA ou TB_GETBUTTONTEXTW.
+    O mecanismo confiavel e usar TB_GETITEMRECT (wParam=indice) para obter o rect do botao
+    e clicar na posicao definida por click_x_pct (0.0=borda esquerda, 0.5=centro, 1.0=borda direita).
+    Use 0.5 (padrao) para botoes normais; use ~0.85 para acionar o dropdown/sidebutton de split-buttons.
+    Use 'list-toolbar-buttons' para descobrir indices.
+
+    button_index: indice 0-based do botao desejado na toolbar (obrigatorio).
+    toolbar_class: classe Win32 da toolbar (default: msvb_lib_toolbar).
+    click_x_pct: posicao horizontal relativa no rect do botao (0.0-1.0, default: 0.5 = centro).
+    """
+
+    TB_BUTTONCOUNT = 0x418
+    TB_GETITEMRECT = 0x41D  # wParam=index_0based, lParam=ptr_to_RECT_em_processo_alvo
+
+    MEM_COMMIT = 0x1000
+    MEM_RESERVE = 0x2000
+    PAGE_READWRITE = 0x04
+    MEM_RELEASE = 0x8000
+    PROCESS_ALL_ACCESS = 0x001F0FFF
+
+    EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+    _app, main_win = _connect_uauxt_window()
+
+    toolbar_handles: List[int] = []
+
+    def _enum_cb(hwnd: int, _lparam: int) -> bool:
+        buf = ctypes.create_unicode_buffer(256)
+        ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+        if buf.value == toolbar_class:
+            toolbar_handles.append(hwnd)
+        return True
+
+    ctypes.windll.user32.EnumChildWindows(main_win.handle, EnumChildProc(_enum_cb), 0)
+
+    if not toolbar_handles:
+        return {
+            "ok": False,
+            "action": "click-toolbar-button",
+            "error": f"Nenhuma janela da classe '{toolbar_class}' encontrada no processo UauXT.",
+        }
+
+    # Preferir toolbar horizontal (width >> height)
+    def _get_rect(hwnd: int) -> Tuple[int, int, int, int]:
+        class WRECT(ctypes.Structure):
+            _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long), ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+        r = WRECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+        return r.left, r.top, r.right, r.bottom
+
+    selected_handle = toolbar_handles[0]
+    for h in toolbar_handles:
+        l, t, r, b = _get_rect(h)
+        w, ht = r - l, b - t
+        # escolhe a toolbar mais larga (horizontal principal de acoes)
+        sl, st, sr, sb = _get_rect(selected_handle)
+        if w > (sr - sl):
+            selected_handle = h
+
+    tb_handle = selected_handle
+    tb_l, tb_t, tb_r, tb_b = _get_rect(tb_handle)
+
+    # Valida indice
+    btn_count = ctypes.windll.user32.SendMessageW(tb_handle, TB_BUTTONCOUNT, 0, 0)
+    if button_index < 0 or button_index >= btn_count:
+        return {
+            "ok": False,
+            "action": "click-toolbar-button",
+            "error": f"button_index={button_index} fora do range [0, {btn_count - 1}] para a toolbar selecionada (handle={tb_handle}).",
+            "button_count": btn_count,
+        }
+
+    # Abre processo alvo para TB_GETITEMRECT cross-process
+    pid = ctypes.wintypes.DWORD()
+    ctypes.windll.user32.GetWindowThreadProcessId(tb_handle, ctypes.byref(pid))
+    h_proc = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid.value)
+    if not h_proc:
+        return {
+            "ok": False,
+            "action": "click-toolbar-button",
+            "error": f"Nao foi possivel abrir o processo PID={pid.value} para leitura de memoria.",
+        }
+
+    import struct as _struct
+
+    remote_rect = ctypes.windll.kernel32.VirtualAllocEx(h_proc, None, 16, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)
+    try:
+        ret = ctypes.windll.user32.SendMessageW(tb_handle, TB_GETITEMRECT, button_index, remote_rect)
+        if not ret:
+            return {
+                "ok": False,
+                "action": "click-toolbar-button",
+                "error": f"TB_GETITEMRECT falhou para indice={button_index}.",
+            }
+
+        local_rect_b = (ctypes.c_byte * 16)()
+        ctypes.windll.kernel32.ReadProcessMemory(h_proc, remote_rect, local_rect_b, 16, None)
+        bl, bt, br, bb = _struct.unpack_from("<iiii", bytes(local_rect_b), 0)
+
+        # Posicao do clique no botao: click_x_pct define a fracao horizontal (0.0=esq, 0.5=centro, 1.0=dir)
+        # Para split-buttons com dropdown na borda direita, use click_x_pct~=0.85
+        cx_client = bl + int((br - bl) * max(0.0, min(1.0, click_x_pct)))
+        cy_client = (bt + bb) // 2
+        screen_x = tb_l + cx_client
+        screen_y = tb_t + cy_client
+    finally:
+        ctypes.windll.kernel32.VirtualFreeEx(h_proc, remote_rect, 0, MEM_RELEASE)
+        ctypes.windll.kernel32.CloseHandle(h_proc)
+
+    # Clica usando eventos fisicos de mouse (SetCursorPos + mouse_event).
+    # click_input do pywinauto nao dispara corretamente em toolbars VB6 (msvb_lib_toolbar).
+    MOUSEEVENTF_LEFTDOWN = 0x0002
+    MOUSEEVENTF_LEFTUP   = 0x0004
+    ctypes.windll.user32.SetForegroundWindow(main_win.handle)
+    time.sleep(0.1)
+    ctypes.windll.user32.SetCursorPos(screen_x, screen_y)
+    time.sleep(0.08)
+    ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+    time.sleep(0.05)
+    ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+    time.sleep(0.15)
+
+    return {
+        "ok": True,
+        "action": "click-toolbar-button",
+        "button_index": button_index,
+        "button_count": btn_count,
+        "toolbar_handle": tb_handle,
+        "button_rect_client": [bl, bt, br, bb],
+        "click_screen": [screen_x, screen_y],
+    }
+
 
 
 def refresh_grid_footer_via_caption(handle: int, page_up_times: int) -> Dict[str, Any]:
@@ -830,6 +1349,27 @@ def main() -> int:
     parser_refresh.add_argument("--page-up-times", type=int, default=1)
     parser_refresh.add_argument("--pretty", action="store_true")
 
+    parser_list_ctrl = subparsers.add_parser("list-controls", help="Enumera todos os controles filhos da janela UauXT (discovery de classes)")
+    parser_list_ctrl.add_argument("--class-filter", default="", help="Filtrar por substring no nome da classe (case-insensitive)")
+    parser_list_ctrl.add_argument("--text-filter", default="", help="Filtrar por substring no texto do controle (case-insensitive)")
+    parser_list_ctrl.add_argument("--pretty", action="store_true")
+
+    parser_list_tb = subparsers.add_parser("list-toolbar-buttons", help="Lista todos os botoes de todas as toolbars (discovery de indices)")
+    parser_list_tb.add_argument("--toolbar-class", default="msvb_lib_toolbar", help="Classe da janela toolbar (default: msvb_lib_toolbar)")
+    parser_list_tb.add_argument("--pretty", action="store_true")
+
+    parser_map_tb = subparsers.add_parser("map-toolbar-buttons", help="Faz hover em cada botao e captura o nome via tooltip (auto-mapeamento)")
+    parser_map_tb.add_argument("--toolbar-class", default="msvb_lib_toolbar", help="Classe da janela toolbar (default: msvb_lib_toolbar)")
+    parser_map_tb.add_argument("--toolbar-index", type=int, default=0, help="Indice da toolbar ordenada por area desc (0=maior/horizontal, 1=vertical, etc.)")
+    parser_map_tb.add_argument("--hover-delay", type=float, default=0.9, help="Segundos de espera por tooltip apos hover (default: 0.9)")
+    parser_map_tb.add_argument("--pretty", action="store_true")
+
+    parser_toolbar = subparsers.add_parser("click-toolbar-button", help="Clica em botao de toolbar VB6 (msvb_lib_toolbar) pelo indice (TB_GETITEMRECT)")
+    parser_toolbar.add_argument("--button-index", type=int, required=True, help="Indice 0-based do botao na toolbar")
+    parser_toolbar.add_argument("--toolbar-class", default="msvb_lib_toolbar", help="Classe da janela toolbar (default: msvb_lib_toolbar)")
+    parser_toolbar.add_argument("--click-x-pct", type=float, default=0.5, help="Fracao horizontal do rect do botao para o clique (0.0=esq, 0.5=centro, 1.0=dir). Use ~0.85 para dropdown/sidebutton. (default: 0.5)")
+    parser_toolbar.add_argument("--pretty", action="store_true")
+
     args = parser.parse_args()
 
     try:
@@ -929,6 +1469,30 @@ def main() -> int:
             data = refresh_grid_footer_via_caption(
                 handle=int(args.handle),
                 page_up_times=int(args.page_up_times),
+            )
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "list-controls":
+            data = list_controls(class_filter=args.class_filter, text_filter=args.text_filter)
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "list-toolbar-buttons":
+            data = list_toolbar_buttons(toolbar_class=args.toolbar_class)
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "map-toolbar-buttons":
+            data = map_toolbar_buttons(toolbar_class=args.toolbar_class, hover_delay_s=float(args.hover_delay), toolbar_index=int(args.toolbar_index))
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
+        if args.command == "click-toolbar-button":
+            data = click_toolbar_button(
+                button_index=int(args.button_index),
+                toolbar_class=args.toolbar_class,
+                click_x_pct=float(args.click_x_pct),
             )
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1

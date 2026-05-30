@@ -12,7 +12,7 @@ Resource    ../../resources/apps/uauxt_grid.resource
 O `uauxt_grid.resource` já importa `uauxt_grid_data.resource` — não importar separadamente nos testes.
 
 ## Probe Win32
-O grid é controlado via `resources/scripts/uauxt_grid_probe.py` (subprocesso 32-bit).  
+O grid é controlado via `resources/scripts/uauxt_probe.py` (subprocesso 32-bit).  
 Nunca chamar o probe diretamente nos testes — usar apenas as keywords do resource.
 
 ---

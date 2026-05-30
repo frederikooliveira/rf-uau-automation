@@ -4,7 +4,7 @@ Documentation       Dados de descoberta e leitura do grid UauXT por Win32.
 
 
 *** Variables ***
-${UAUXT_GRID_PROBE_SCRIPT}                resources/scripts/uauxt_grid_probe.py
+${UAUXT_GRID_PROBE_SCRIPT}                resources/scripts/uauxt_probe.py
 ${UAUXT_GRID_TARGET_TEXT}                 Contas a Pagar
 ${UAUXT_GRID_PROCESSOS_PAGAMENTO_TARGET_TEXT}    Processos de pagamento
 ${UAUXT_GRID_WINDOW_TITLE_REGEX}          UAUXT

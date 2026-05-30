@@ -25,7 +25,7 @@ config/                # Configurações por ambiente (futuro)
 ## 1.1 Politica de Scripts de Suporte
 
 - Scripts Python em `resources/scripts/` devem existir apenas quando usados por resources/tests.
-- Script oficial atual: `uauxt_grid_probe.py`.
+- Script oficial atual: `uauxt_probe.py` (probe Win32 do UauXT — grid e toolbar).
 - Scripts temporarios de investigacao (ex.: `tmp_*`, `diagnostico_*`) devem ser removidos antes de finalizar PR.
 
 ## 1.2 Fluxo Recomendado para Mudancas com IA

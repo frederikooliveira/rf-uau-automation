@@ -161,3 +161,50 @@ Alterar Conta Do Processo
     Send Keys    keys={ENTER}
     Pausa Controlada    500ms    Aguardando confirmacao e retorno ao grid
     Log    [DOM-CP] Conta '${codigo_conta}' selecionada na linha ${row_index}.    console=True
+
+Clicar Botao Na Toolbar Acoes
+    [Documentation]    Clica em botao da toolbar de acoes (msvb_lib_toolbar) pelo indice 0-based.
+    ...                Indices mapeados em contas_pagar_data.resource (ex.: CONTAS_PAGAR_TOOLBAR_MANUTENCAO_INDEX).
+    ...                Use keyword 'Listar Botoes Toolbar Via Probe' para descobrir novos indices.
+    ...                click_x_pct: fracao horizontal do clique no rect do botao (0.5=centro, 0.85=borda direita/dropdown).
+    [Arguments]    ${button_index}    ${timeout}=10s    ${click_x_pct}=0.5
+    Log    [DOM-CP] Clicando botao toolbar idx=${button_index} (x_pct=${click_x_pct}) via probe Win32...    console=True
+    Clicar Botao Toolbar Por Indice Via Probe    ${button_index}    click_x_pct=${click_x_pct}
+    Log    [DOM-CP] Botao idx=${button_index} clicado com sucesso.    console=True
+
+Selecionar Linha E Clicar Toolbar
+    [Documentation]    Seleciona uma linha no grid de Processos de pagamento e clica em um botao da toolbar de acoes.
+    ...                button_index: indice 0-based do botao na toolbar (veja contas_pagar_data.resource).
+    [Arguments]    ${row_index}    ${button_index}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
+    Log    [DOM-CP] Selecionando linha ${row_index} e acionando toolbar idx=${button_index}...    console=True
+    Selecionar Linha No Grid Processos Pagamento    ${row_index}
+    Pausa Controlada    300ms    Aguardando selecao da linha
+    Clicar Botao Na Toolbar Acoes    ${button_index}    ${timeout}
+    Log    [DOM-CP] Toolbar idx=${button_index} acionada para linha ${row_index}.    console=True
+
+Clicar Dropdown Imprimir E Selecionar Nota Debito
+    [Documentation]    Abre o menu dropdown do botao Imprimir clicando na borda direita (sidebutton/split-button)
+    ...                e seleciona a opcao "Nota de debito" via teclado (DOWN + ENTER).
+    ...                Menus popup VB6 nao expõem elementos via UIA — navegacao por teclado e obrigatoria.
+    ...                Como ha apenas uma opcao no submenu, um DOWN e suficiente para selecionar.
+    ...                Pre-requisito: linha ja selecionada no grid.
+    Log    [DOM-CP] Abrindo dropdown do botao Imprimir (split-button, x_pct=0.85)...    console=True
+    Clicar Botao Na Toolbar Acoes    ${CONTAS_PAGAR_TOOLBAR_IMPRIMIR_SOLICITACAO_INDEX}    click_x_pct=0.85
+    Pausa Controlada    400ms    Aguardando menu dropdown abrir
+    Log    [DOM-CP] Selecionando primeira opcao do menu via teclado (DOWN + ENTER)...    console=True
+    Send Keys    keys={DOWN}
+    Pausa Controlada    150ms    Aguardando foco no primeiro item
+    Send Keys    keys={ENTER}
+    Pausa Controlada    500ms    Aguardando tela de impressao de nota de debito
+    Log    [DOM-CP] Opcao 'Nota de debito' acionada com sucesso.    console=True
+
+Selecionar Linha E Imprimir Nota Debito
+    [Documentation]    Seleciona uma linha no grid de Processos de pagamento e aciona a impressao
+    ...                de nota de debito via dropdown do botao Imprimir.
+    [Arguments]    ${row_index}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
+    Log    [DOM-CP] Selecionando linha ${row_index} para impressao de nota de debito...    console=True
+    Selecionar Linha No Grid Processos Pagamento    ${row_index}
+    Pausa Controlada    300ms    Aguardando selecao da linha
+    Clicar Dropdown Imprimir E Selecionar Nota Debito
+    Log    [DOM-CP] Impressao de nota de debito acionada para linha ${row_index}.    console=True
+

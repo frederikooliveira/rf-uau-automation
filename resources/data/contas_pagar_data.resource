@@ -22,3 +22,58 @@ ${CONTAS_PAGAR_BOTAO_BUSCAR_LOCATOR}          id:ucContainer > id:23
 # --- Timeouts e delays ---
 ${CONTAS_PAGAR_TIMEOUT_PADRAO}                15s
 ${CONTAS_PAGAR_DATA_INICIAL_PADRAO}           01/01/2022
+
+# --- Toolbar de ações (msvb_lib_toolbar, toolbar_index=0 — horizontal) ---
+# NOTA: msvb_lib_toolbar (VB6) nao expoe textos via UIA/MSAA/TB_GETBUTTONTEXTW.
+# Indices mapeados via hover+tooltip em 30/05/2026 (probe map-toolbar-buttons, 13/15 com nome):
+#
+#   [0]  → Novo  (desabilitado nesta tela)
+#   [1]  → SEPARADOR
+#   [2]  → Confirmar parcela e enviá-la para emissões
+#   [3]  → Manutenção  (tooltip: "Reparcelamento de parcelas")
+#   [4]  → Vínculo PL  (tooltip: "Visualizar os respectivos vínculos com planejamento") ← confirmado (test 16)
+#   [5]  → Protocolo   (tooltip: "Número do malote de envio de documentos para o cliente")
+#   [6]  → (dropdown do Protocolo — mesmo rect/tooltip que [5])
+#   [7]  → Filtrar processos por nota fiscal
+#   [8]  → Imprimir Solicitação de pagamento
+#   [9]  → (dropdown do Imprimir — sidebutton à direita de [8])
+#          abre menu com opção "Nota de débito"
+#   [10] → Gerar notas para processos com a chave de NFe vinculada
+#   [11] → Devolução
+#   [12] → SEPARADOR
+#   [13] → Chaves Pix  (tooltip: "Manutenção de chaves pix")
+#   [14] → Filtrar Processos
+#   [15] → Exibe os históricos de alteração da confirmação DVQ
+#   [16] → SEPARADOR
+#   [17] → Acompanhamento da assinatura digital
+#   [18] → Acompanhamento de fluxo BPM
+#
+# Para re-mapear: .venv\Scripts\python.exe resources/scripts/uauxt_probe.py map-toolbar-buttons --toolbar-index 0 --pretty
+${CONTAS_PAGAR_TOOLBAR_ACOES_LOCATOR}                   class:msvb_lib_toolbar
+${CONTAS_PAGAR_TOOLBAR_NOVO_INDEX}                      0
+${CONTAS_PAGAR_TOOLBAR_CONFIRMAR_PARCELA_INDEX}         2
+${CONTAS_PAGAR_TOOLBAR_MANUTENCAO_INDEX}                3
+${CONTAS_PAGAR_TOOLBAR_VINCULO_PL_INDEX}                4
+${CONTAS_PAGAR_TOOLBAR_PROTOCOLO_INDEX}                 5
+${CONTAS_PAGAR_TOOLBAR_FILTRAR_NOTA_FISCAL_INDEX}       7
+${CONTAS_PAGAR_TOOLBAR_IMPRIMIR_SOLICITACAO_INDEX}      8
+${CONTAS_PAGAR_TOOLBAR_IMPRIMIR_DROPDOWN_INDEX}         9
+${CONTAS_PAGAR_TOOLBAR_GERAR_NFE_INDEX}                 10
+${CONTAS_PAGAR_TOOLBAR_DEVOLUCAO_INDEX}                 11
+${CONTAS_PAGAR_TOOLBAR_CHAVES_PIX_INDEX}                13
+${CONTAS_PAGAR_TOOLBAR_FILTRAR_PROCESSOS_INDEX}         14
+${CONTAS_PAGAR_TOOLBAR_HISTORICO_DVQ_INDEX}             15
+${CONTAS_PAGAR_TOOLBAR_ASSINATURA_DIGITAL_INDEX}        17
+${CONTAS_PAGAR_TOOLBAR_BPM_INDEX}                       18
+
+# --- Menu dropdown do botão Imprimir (navegacao por teclado — VB6 popup nao expoe UIA) ---
+# Apos clicar o sidebutton (x_pct=0.85 no idx=8), enviar {DOWN} + {ENTER} para selecionar "Nota de debito".
+
+# --- Toolbar de visões (msvb_lib_toolbar, toolbar_index=1 — vertical esquerda) ---
+# Mapeado via hover+tooltip em 30/05/2026 (2/2 identificados):
+#   [0]  → Processos de pagamento  (visão padrão)
+#   [1]  → Análise do contas a pagar
+#
+# Para re-mapear: .venv\Scripts\python.exe resources/scripts/uauxt_probe.py map-toolbar-buttons --toolbar-index 1 --pretty
+${CONTAS_PAGAR_TOOLBAR_VISOES_PROCESSOS_INDEX}          0
+${CONTAS_PAGAR_TOOLBAR_VISOES_ANALISE_INDEX}            1

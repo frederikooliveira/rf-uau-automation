@@ -26,7 +26,7 @@ rf-uau-automation/
 │   │   ├── uauxt_grid_data.resource
 │   │   └── pessoas_data.resource
 │   ├── scripts/                   # Scripts Python de suporte tecnico
-│   │   └── uauxt_grid_probe.py    # Script oficial usado pelos keywords de grid
+│   │   └── uauxt_probe.py         # Probe oficial Win32 do UauXT (grid + toolbar)
 │   └── screenshots/               # Capturas de tela (screenshots)
 ├── tests/
 │   ├── 01_pipeline_setup/        # Pipeline base: baixar, compilar, publicar, validar
@@ -164,7 +164,7 @@ Testar Compilacao
 
 ## 🤖 Padrao IA e Scripts
 
-- Script Python oficial integrado ao projeto: `resources/scripts/uauxt_grid_probe.py`.
+- Script Python oficial integrado ao projeto: `resources/scripts/uauxt_probe.py`.
 - Scripts temporarios de investigacao nao devem permanecer no repositorio.
 - Para novos recursos de automacao assistidos por IA:
     1. criar dados em `resources/data/*_data.resource`
