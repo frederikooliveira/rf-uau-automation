@@ -65,13 +65,23 @@ ${payload}=    Alterar Celulas No Grid Processos Pagamento Por Indices De Linha
 
 ### Acionar botão de célula (ex.: Vínculos NF, dropdown)
 ```robot
-# interaction_mode: right-corner-click (default) ou alt-down
+# interaction_mode: right-corner-click (default), alt-down ou double-click
 ${payload}=    Clicar Botao Da Celula No Grid Processos Pagamento
 ...    row_index=0    col_index=13    interaction_mode=alt-down
 
 # Atalho para Alt+Down:
 ${payload}=    Ciclar Opcao Da Celula No Grid Processos Pagamento
 ...    row_index=0    col_index=13
+```
+
+### Duplo clique em linha (ex.: abrir tela de manutenção)
+```robot
+# row_index: 0-based
+${payload}=    Duplo Clique Na Linha Do Grid Processos Pagamento    row_index=0
+
+# Genérico (qualquer grid):
+${payload}=    Duplo Clique Na Linha Do Grid UauXT
+...    row_index=0    target_text=Processos de pagamento
 ```
 
 ### Ler preview de linhas (clipboard)

@@ -524,8 +524,8 @@ def click_grid_cell_button(
     row_index_0 = max(0, int(row_index))
     col_index_1 = max(1, int(col_index))
     mode = str(interaction_mode or "right-corner-click").strip().lower()
-    if mode not in ("right-corner-click", "alt-down"):
-        raise ValueError("interaction_mode deve ser 'right-corner-click' ou 'alt-down'.")
+    if mode not in ("right-corner-click", "alt-down", "double-click"):
+        raise ValueError("interaction_mode deve ser 'right-corner-click', 'alt-down' ou 'double-click'.")
 
     _safe(ctrl.set_focus)
     _safe(ctrl.click_input)
@@ -565,6 +565,24 @@ def click_grid_cell_button(
             click_ok = False
             click_error = str(exc)
         time.sleep(0.10)
+    elif mode == "double-click":
+        rect = _safe(ctrl.rectangle, None)
+        if not rect:
+            raise RuntimeError("Nao foi possivel obter retangulo do grid para duplo clique por coordenada.")
+
+        grid_width = max(1, int(rect.right) - int(rect.left))
+        grid_height = max(1, int(rect.bottom) - int(rect.top))
+        cell_height = max(1, min(26, int(grid_height / max(row_index_0 + 12, 12))))
+        click_x = max(6, int(grid_width / 2))
+        click_y = max(10, int(24 + (row_index_0 * cell_height) + (cell_height / 2)))
+
+        time.sleep(0.08)
+        try:
+            ctrl.double_click_input(coords=(click_x, click_y))
+        except Exception as exc:
+            click_ok = False
+            click_error = str(exc)
+        time.sleep(0.20)
     else:
         time.sleep(0.08)
         try:

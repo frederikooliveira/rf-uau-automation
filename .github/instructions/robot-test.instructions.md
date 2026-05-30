@@ -31,10 +31,22 @@ ${VARIAVEL_TESTE}    valor
 ## Ordem de imports em `*** Settings ***`
 
 1. `Library Collections` (quando usar dicionários)
-2. `Resource ../../resources/apps/uauxt.resource` (se usar login/navegação)
-3. `Resource ../../resources/apps/uauxt_grid.resource` (se usar grid)
-4. Outros resources de apps na sequência
-5. **Nunca** importar `resources/data/*` diretamente — os resources de apps/domains já importam
+2. `Resource ../../resources/domains/<dominio>.resource` **se o contexto de negócio já tiver domain** (contas_pagar, pessoas…)
+3. `Resource ../../resources/apps/uauxt.resource` — **somente se o domain não o importar já** (login, navegação sem domínio)
+4. `Resource ../../resources/apps/uauxt_grid.resource` — **somente se o domain não o importar já**
+5. Outros resources de apps na sequência
+6. **Nunca** importar `resources/data/*` diretamente — os resources de apps/domains já importam
+
+### Quando usar domain vs apps diretamente
+
+| Situação | Import correto |
+|----------|---------------|
+| Fluxo de Contas a Pagar (filtro, grid, banco/conta) | `domains/contas_pagar.resource` |
+| Fluxo de Pessoas | `domains/pessoas.resource` |
+| Apenas login/navegação sem fluxo de negócio definido | `apps/uauxt.resource` |
+| Somente operações de grid genérico | `apps/uauxt_grid.resource` |
+
+**Regra:** se existe um domain para o contexto, importar o domain — nunca reimplementar keywords de negócio no teste.
 
 ## Tags obrigatórias
 
@@ -77,9 +89,16 @@ Sempre com `console=True` para aparecer no terminal durante execução.
 
 ## Keywords locais no teste
 
-Permitido criar `*** Keywords ***` no arquivo de teste apenas para:
-- Agrupamento semântico de passos do próprio teste
-- Não reutilizável em outros arquivos (senão mover para `resources/domains/`)
+Permitido criar `*** Keywords ***` no arquivo de teste **somente** para:
+- Agrupamento semântico de passos **exclusivos** deste teste
+- Lógica que não fará sentido em nenhum outro arquivo
+
+**Proibido** criar keywords locais que:**
+- Encapsulem fluxos de negócio já cobertos por um domain existente
+- Interajam com popups, grids, campos de formulário de forma reutilizável
+- Duplicariam keywords de `resources/domains/` ou `resources/apps/`
+
+**Regra de ouro:** se a keyword descreve *o que o negócio faz* ("Selecionar Empresa", "Alterar Banco", "Configurar Periodo"), ela pertence ao domain, não ao teste.
 
 ## Nomenclatura de arquivos
 

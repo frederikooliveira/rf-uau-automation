@@ -27,16 +27,28 @@ Para encontrar o próximo número:
 #file:tests/90_examples
 ```
 
+## Domains disponíveis
+
+Antes de definir imports, verificar se existe domain para o contexto:
+
+| Contexto | Domain | Principais keywords |
+|----------|--------|---------------------|
+| Contas a Pagar | `resources/domains/contas_pagar.resource` | `Selecionar Empresa E Obra`, `Selecionar Empresa No Popup`, `Configurar Periodo Prorrogacao`, `Preencher Confirmado Por Faixa`, `Alterar Banco Do Processo`, `Alterar Conta Do Processo` |
+| Pessoas | `resources/domains/pessoas.resource` | (ver arquivo) |
+
+**Regra:** se o contexto tiver domain, o import principal é o domain — não reimplementar keywords de negócio no teste.
+
 ## Template a seguir
 
 ```robot
 *** Settings ***
 Documentation       <Descricao objetiva do que o teste valida.>
 Library             Collections
-Resource            ../../resources/apps/uauxt.resource
-# Adicionar apenas os resources realmente usados:
+# SE existir domain para o contexto, importar o domain (ele já inclui apps/data):
+Resource            ../../resources/domains/<dominio>.resource
+# SE não houver domain (ex.: apenas login/navegação genérica):
+# Resource            ../../resources/apps/uauxt.resource
 # Resource            ../../resources/apps/uauxt_grid.resource
-# Resource            ../../resources/domains/<dominio>.resource
 Test Tags           examples    uauxt    <tag-funcional>
 
 
@@ -49,7 +61,7 @@ ${VARIAVEL_EXEMPLO}    valor
 <Nome Do Caso Em Titulo>
     [Documentation]    <O que o teste faz. Pre-requisito: <estado inicial esperado>.>
     Log    [<PREFIXO>] Iniciando <descricao>...    console=True
-    # Keywords de domínio ou apps aqui
+    # Keywords de domínio ou apps aqui — NUNCA reimplementar fluxos de negócio no teste
     Log    [<PREFIXO>] Concluido com sucesso.    console=True
 ```
 
@@ -59,7 +71,7 @@ ${VARIAVEL_EXEMPLO}    valor
 - Sem `Sleep` — usar `Pausa Controlada` de `sync.resource` (via apps)
 - Sem automação por imagem
 - Prefixo de log: `[DIAG-GRID]`, `[CONTAS_PAGAR]`, `[UAUXT]`, etc. (ver `robot-test.instructions.md`)
-- Se usar grid: `Resource ../../resources/apps/uauxt_grid.resource` — não importar `uauxt_grid_data.resource` separadamente
+- **Se existe domain para o contexto, importar o domain — não reimplementar keywords de negócio no teste**
 - Variáveis de negócio em `*** Variables ***` com nome descritivo (ex.: `${COLUNA_CONFIRMADO}    5`)
 
 ## Após criar o arquivo

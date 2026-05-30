@@ -379,7 +379,43 @@ Ciclar Opcao Da Celula No Grid Processos Pagamento
     ...    alt-down
     RETURN    ${payload}
 
-Ler Preview De Linhas Do Grid Por Handle
+Duplo Clique Na Linha Do Grid UauXT
+    [Documentation]    Navega ate a linha alvo do grid e executa duplo clique no centro da linha.
+    ...                Util para abrir telas de manutencao ou detalhe do registro.
+    ...                row_index: 0-based.
+    [Arguments]    ${row_index}=0
+    ...    ${target_text}=${UAUXT_GRID_TARGET_TEXT}
+    ...    ${grid_index}=${UAUXT_GRID_PREFERRED_INDEX}
+    ${grid}=    Registrar Grid UauXT Por Win32    ${target_text}    ${grid_index}
+    ${handle}=    Get From Dictionary    ${grid}    handle
+    ${json_output}=    Executar Probe Grid UauXT
+    ...    click-cell-button
+    ...    --handle
+    ...    ${handle}
+    ...    --page-up-times
+    ...    1
+    ...    --row-index
+    ...    ${row_index}
+    ...    --col-index
+    ...    1
+    ...    --interaction-mode
+    ...    double-click
+    ${payload}=    Parsear Payload Json Do Probe    ${json_output}
+    ${ok}=    Get From Dictionary    ${payload}    ok
+    Should Be True    ${ok}    Duplo clique na linha ${row_index} do grid falhou.
+    Log    [UAUXT-GRID] Duplo clique executado na linha ${row_index}. handle=${handle}    console=True
+    RETURN    ${payload}
+
+Duplo Clique Na Linha Do Grid Processos Pagamento
+    [Documentation]    Duplo clique na linha alvo do grid fixo de Processos de pagamento (0-based).
+    [Arguments]    ${row_index}=0
+    ${payload}=    Duplo Clique Na Linha Do Grid UauXT
+    ...    ${row_index}
+    ...    ${UAUXT_GRID_PROCESSOS_PAGAMENTO_TARGET_TEXT}
+    ...    ${UAUXT_GRID_PREFERRED_INDEX}
+    RETURN    ${payload}
+
+
     [Documentation]    Le linhas do grid por handle usando Ctrl+A/Ctrl+C e clipboard.
     [Arguments]    ${grid_handle}    ${max_rows}=${UAUXT_GRID_MAX_ROWS_PREVIEW}    ${page_downs}=0
     ${json_output}=    Executar Probe Grid UauXT
