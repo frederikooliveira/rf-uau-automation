@@ -7,3 +7,4 @@ robotframework-robocop
 robotframework-tidy
 robotframework-pabot
 robotframework-debuglibrary
+robotframework-requests

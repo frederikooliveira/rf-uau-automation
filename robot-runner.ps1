@@ -20,6 +20,7 @@ $ErrorActionPreference = "Stop"
 #
 # Estrutura de testes:
 # - tests/01_pipeline_setup/ : Pipeline base: baixar, compilar, publicar, validar
+# - tests/api/               : Testes de API REST
 # - tests/90_examples/      : Exemplos reutilizaveis para onboarding QA
 # - tests/flows/            : Fluxos compostos multi-sistema (futuro)
 #
@@ -76,6 +77,10 @@ switch ($Task.ToLowerInvariant()) {
     "examples" {
         # Suite de exemplos reutilizaveis para referencia e onboarding
         Invoke-Robot "tests\90_examples"
+    }
+    "api" {
+        # Suite de testes de API REST
+        Invoke-Robot "tests\api"
     }
     "smoke" {
         # Testes de verificacao rapida do ambiente
@@ -142,6 +147,7 @@ switch ($Task.ToLowerInvariant()) {
         Write-Host "    modulos       Etapa 3 - Compilacao especifica dos modulos UAU"
         Write-Host "    mover-arquivos Etapa 4 - Configurar local de saida dos arquivos"
         Write-Host "    examples      Suite de exemplos reutilizaveis para QA"
+        Write-Host "    api           Suite de testes de API REST"
         Write-Host "    smoke         Suite smoke por tag smoke"
         Write-Host "    funcional     Suite funcional por tag funcional"
         Write-Host "    integracao    Suite integracao por tag integracao"

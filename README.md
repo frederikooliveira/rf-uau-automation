@@ -16,10 +16,12 @@ rf-uau-automation/
 │   │   ├── compilador.resource   # UAU Compilador
 │   │   ├── visual_studio.resource # Visual Studio
 │   │   ├── uauxt.resource        # UauXT
+│   │   ├── api_client.resource   # Cliente tecnico para API REST
 │   │   └── uauxt_grid.resource   # Operacoes tecnicas de grid (probe/win32)
 │   ├── domains/                   # Camada de negócio (por domínio)
 │   │   └── pessoas.resource      # Cadastro de pessoas
 │   ├── data/                      # Camada de dados
+│   │   ├── api_data.resource      # Base URL, headers e timeouts de API
 │   │   ├── compilador_data.resource   # Paths, locators, timeouts
 │   │   ├── vs_data.resource
 │   │   ├── uauxt_data.resource
@@ -30,6 +32,7 @@ rf-uau-automation/
 │   └── screenshots/               # Capturas de tela (screenshots)
 ├── tests/
 │   ├── 01_pipeline_setup/        # Pipeline base: baixar, compilar, publicar, validar
+│   ├── api/                      # Testes de API REST
 │   ├── 90_examples/              # Exemplos reutilizáveis para QA
 │   └── flows/                    # Fluxos multi-etapa (futuro)
 ├── docs/
@@ -67,6 +70,9 @@ pip install -r requirements.txt
 
 # Exemplos e referências executáveis
 .\robot-runner.ps1 examples
+
+# Suite de API REST
+.\robot-runner.ps1 api
 
 # Tudo
 .\robot-runner.ps1 all-suites
@@ -147,6 +153,7 @@ Testar Compilacao
 
 # Suites principais
 .\robot-runner.ps1 examples          # Suite de exemplos reutilizáveis
+.\robot-runner.ps1 api               # Suite de API REST
 
 # Grupos
 .\robot-runner.ps1 all-suites        # Todas as suites cadastradas
@@ -219,6 +226,13 @@ Quando implementar config por ambiente:
 ```robot
 Resource    ../config/${AMBIENTE}_vars.resource    # dev ou prod
 ```
+
+## 🌐 Variáveis de Ambiente para API
+
+Defina no `.env` para executar os testes em uma URL única e reutilizável:
+
+- `API_X_AUTH`: valor do header `X-Globaltec-Authorization` para autenticação
+- `API_TOKEN_GLOBALTEC`: token retornado no login e reutilizado no header `Authorization`
 
 ## 📞 Suporte
 

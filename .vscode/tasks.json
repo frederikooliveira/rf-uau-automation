@@ -1,0 +1,44 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Robot: Rodar API",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python",
+			"args": [
+				"-m",
+				"robot",
+				"--outputdir",
+				"results",
+				"tests\\api"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Robot: Rodar API",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python",
+			"args": [
+				"-m",
+				"robot",
+				"--outputdir",
+				"results",
+				"tests\\api"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Robot: Rodar API",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python",
+			"args": [
+				"-m",
+				"robot",
+				"--outputdir",
+				"results",
+				"tests\\api"
+			],
+			"group": "test"
+		}
+	]
+}

@@ -14,6 +14,9 @@ Regra de ouro
 - tests/02_pipeline_smoke
   - Finalidade: validacao rapida de disponibilidade basica.
   - Tag principal: smoke.
+- tests/api
+  - Finalidade: validacao de contratos e disponibilidade de API REST.
+  - Tags principais: api, smoke-api, funcional-api.
 - tests/flows
   - Finalidade: testes funcionais de negocio.
   - Tags base: funcional, comportamento-unico.
@@ -46,7 +49,7 @@ Quando o arquivo tiver varios casos:
 
 Sempre combinar categorias:
 - Tipo de suite: setup, smoke, funcional, integracao, regressao, examples.
-- Dominio: vendas, financeiro, contas-pagar, uauxt.
+- Dominio: vendas, financeiro, contas-pagar, uauxt, api.
 - Comportamento: resumo-venda, relatorio-demonstrativo, emissao-pagamentos.
 - Tecnica (opcional): popup, grid-botao, diagnostico.
 
@@ -97,6 +100,7 @@ Regra de divisao:
 ## Comandos padronizados
 
 - .\\robot-runner.ps1 setup
+- .\\robot-runner.ps1 api
 - .\\robot-runner.ps1 smoke
 - .\\robot-runner.ps1 funcional
 - .\\robot-runner.ps1 integracao
