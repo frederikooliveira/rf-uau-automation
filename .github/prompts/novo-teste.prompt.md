@@ -14,17 +14,21 @@ Se o usuário não informou, pergunte:
 2. **Contexto funcional** (ex.: contas-pagar, pessoas, aprovacao)
 3. **Recursos** que o teste usará (uauxt login, grid, menu, etc.)
 4. **Pré-requisito**: tela já aberta ou precisa de login completo?
-5. **Tags adicionais** além de `examples` e `uauxt`
+5. **Tipo do teste**: fluxo real (`tests/flows`) ou exemplo (`tests/90_examples`)
+6. **Tags adicionais** além de `uauxt`
 
 ## Onde criar
 
-Pasta: `tests/90_examples/`  
+Pasta padrao: `tests/flows/<contexto>/`  
 Nome: próximo número disponível + nome descritivo  
-Ex.: `14_validar_aprovacao_nf.robot`
+Ex.: `01_validar_aprovacao_nf.robot`
 
-Para encontrar o próximo número:
+Somente quando o usuario pedir explicitamente **exemplo/diagnostico**, usar:
+- `tests/90_examples/NN_nome_descritivo.robot`
+
+Para encontrar o próximo número na pasta alvo:
 ```
-#file:tests/90_examples
+#file:tests/flows/<contexto>
 ```
 
 ## Domains disponíveis
@@ -49,7 +53,10 @@ Resource            ../../resources/domains/<dominio>.resource
 # SE não houver domain (ex.: apenas login/navegação genérica):
 # Resource            ../../resources/apps/uauxt.resource
 # Resource            ../../resources/apps/uauxt_grid.resource
-Test Tags           examples    uauxt    <tag-funcional>
+# Fluxo real (padrao):
+Test Tags           uauxt    <tag-funcional>
+# Exemplo/diagnostico (somente em tests/90_examples):
+# Test Tags         examples    uauxt    <tag-funcional>
 
 
 *** Variables ***
@@ -73,6 +80,8 @@ ${VARIAVEL_EXEMPLO}    valor
 - Prefixo de log: `[DIAG-GRID]`, `[CONTAS_PAGAR]`, `[UAUXT]`, etc. (ver `robot-test.instructions.md`)
 - **Se existe domain para o contexto, importar o domain — não reimplementar keywords de negócio no teste**
 - Variáveis de negócio em `*** Variables ***` com nome descritivo (ex.: `${COLUNA_CONFIRMADO}    5`)
+- Nao usar tag `examples` em testes de fluxo real (`tests/flows`)
+- Usar tag `examples` apenas em `tests/90_examples`
 
 ## Após criar o arquivo
 

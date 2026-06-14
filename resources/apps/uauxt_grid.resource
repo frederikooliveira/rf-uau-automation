@@ -1,6 +1,7 @@
 *** Settings ***
 Documentation       Keywords de automacao tecnica para descoberta de grid no UauXT.
-...                 Responsabilidade: localizar componente Win32 do grid, navegar por teclado e ler linhas por clipboard.
+...                 Objetivo: localizar componente Win32 do grid,
+...                 navegar por teclado e ler linhas por clipboard.
 Library             Collections
 Library             OperatingSystem
 Library             Process

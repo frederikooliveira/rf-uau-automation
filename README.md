@@ -129,8 +129,8 @@ Testar Compilacao
 1. Configurações de menu em `resources/data/uauxt_menu_data.resource`
 2. Keywords de navegação em `resources/apps/uauxt.resource`
 3. Exemplos executáveis:
-   - `04_uauxt_navegacao_aprovacao.robot` - Acesso à tela
-   - `05_uauxt_aprovacao_pagamento.robot` - Aprovação em grid
+    - `04_uauxt_acessar_contas_pagar.robot` - Acesso à tela
+    - `05_uauxt_aprovacao_pagamento.robot` - Aprovação em grid
 
 ## 🔧 Comandos Runner
 

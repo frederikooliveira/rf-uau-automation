@@ -77,6 +77,26 @@ switch ($Task.ToLowerInvariant()) {
         # Suite de exemplos reutilizaveis para referencia e onboarding
         Invoke-Robot "tests\90_examples"
     }
+    "smoke" {
+        # Testes de verificacao rapida do ambiente
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --include smoke tests
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+    "funcional" {
+        # Fluxos funcionais padrao (1 caso = 1 comportamento)
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --include funcional tests
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+    "integracao" {
+        # Suite de integracao entre dominios/telas (por tag)
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --include integracao tests
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+    "regressao" {
+        # Suite de regressao (por tag)
+        & $python -m robot --outputdir results --variable "UAUXT_EXE:$($env:UAUXT_EXE)" --include regressao tests
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
     "all-suites" {
         # Roda tudo de uma vez (Robot gera um unico relatorio consolidado)
         Invoke-Robot "tests"
@@ -122,6 +142,10 @@ switch ($Task.ToLowerInvariant()) {
         Write-Host "    modulos       Etapa 3 - Compilacao especifica dos modulos UAU"
         Write-Host "    mover-arquivos Etapa 4 - Configurar local de saida dos arquivos"
         Write-Host "    examples      Suite de exemplos reutilizaveis para QA"
+        Write-Host "    smoke         Suite smoke por tag smoke"
+        Write-Host "    funcional     Suite funcional por tag funcional"
+        Write-Host "    integracao    Suite integracao por tag integracao"
+        Write-Host "    regressao     Suite regressao por tag regressao"
         Write-Host ""
         Write-Host "  Aguardar:"
         Write-Host "    aguardar      Aguarda compilacao dos componentes terminar"

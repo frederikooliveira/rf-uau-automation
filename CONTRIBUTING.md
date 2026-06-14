@@ -32,9 +32,37 @@ config/                # Configurações por ambiente (futuro)
 
 1. Criar/ajustar variaveis e locators em `resources/data/*_data.resource`.
 2. Implementar keyword tecnico em `resources/apps/*.resource`.
-3. Criar ou atualizar exemplo executavel em `tests/90_examples/`.
+3. Criar ou atualizar teste na trilha correta:
+    - `tests/flows/<contexto>/` para fluxos reais
+    - `tests/90_examples/` somente para exemplos/diagnostico solicitados explicitamente
 4. Validar com `--dryrun` e depois execucao real por tag.
 5. Atualizar README/docs quando novos fluxos virarem padrao.
+
+### Regra anti-duplicacao (obrigatoria)
+
+- Operacoes Win32 de grid/toolbar devem ser centralizadas em `resources/apps/uauxt_grid.resource`.
+- Nao duplicar `Run Process` para `resources/scripts/uauxt_probe.py` em resources de contexto quando ja existir keyword compartilhada.
+- Se faltar acao no shared app, adicionar primeiro em `uauxt_grid.resource` e depois reutilizar no domain/contexto.
+
+## 1.3 Quando criar em flows e quando criar subpastas em tests
+
+- Use `tests/flows/` para cenarios reais de negocio (regressao, smoke funcional, fluxo de ponta a ponta).
+- Use `tests/90_examples/` apenas para material de referencia, experimento guiado ou diagnostico explicitamente pedido.
+- Nao criar fluxo real dentro de `tests/90_examples/`.
+
+### Regra para subpastas em `tests/flows/`
+
+Crie subpasta quando houver separacao clara por contexto funcional. Exemplos:
+- `tests/flows/contas_pagar/`
+- `tests/flows/pessoas/`
+- `tests/flows/financeiro/`
+
+Evite subpastas por variacao tecnica pequena (ex.: "com_popup", "sem_popup"). Essas variacoes devem virar arquivos na mesma pasta de contexto.
+
+### Tags recomendadas por pasta
+
+- Em `tests/flows/`: usar tags de contexto/objetivo (sem `examples` por padrao).
+- Em `tests/90_examples/`: incluir `examples`.
 
 ## 2. Estrutura de Camadas
 
@@ -234,6 +262,45 @@ Esta seção define de forma obrigatória quais bibliotecas podem ser usadas no 
 2. Contexto funcional ou de pipeline
 3. Ação principal
 4. Resultado/objetivo do cenário
+
+---
+
+## 4. Passo a passo para QA
+
+### 4.1 Quando for criar um teste novo
+
+1. Defina se o caso é fluxo real ou exemplo/diagnóstico.
+2. Escolha a pasta correta:
+    - fluxo real: `tests/flows/<contexto>/`
+    - exemplo/diagnóstico: `tests/90_examples/` somente quando isso for pedido explicitamente
+3. Verifique se já existe `domain` para o contexto.
+4. Reaproveite keywords de `resources/domains/` e `resources/apps/` antes de criar algo novo.
+5. Se faltar locator, coloque `TODO_CONFIGURAR_` em `resources/data/<contexto>_data.resource`.
+6. Nomeie o arquivo no padrão `NN_nome_descritivo.robot`.
+7. Use tags corretas:
+    - `tests/flows/`: tags de contexto e objetivo
+    - `tests/90_examples/`: incluir `examples`
+8. Valide primeiro com `--dryrun`.
+9. Depois execute pela tag do cenário.
+
+### 4.2 Quando for alterar um teste já existente
+
+1. Identifique a camada que precisa mudar: `data`, `apps`, `domains` ou `tests`.
+2. Se a mudança for de locator ou dado, altere primeiro `resources/data/`.
+3. Se a mudança for de interação técnica, altere `resources/apps/`.
+4. Se a mudança for de regra de negócio, altere `resources/domains/`.
+5. Se a mudança for só de cenário ou asserção do caso, altere `tests/`.
+6. Preserve a pasta original do teste: não mover fluxo real para `tests/90_examples/`.
+7. Mantenha o padrão de logs e tags já usado pelo contexto.
+8. Revalide com `--dryrun` e, depois, execução real da tag afetada.
+
+### 4.3 Regra rápida de decisão
+
+- Se é fluxo de negócio real, vai para `tests/flows/`.
+- Se é exemplo ou diagnóstico explícito, vai para `tests/90_examples/`.
+- Se é comportamento reutilizável do negócio, vai para `resources/domains/`.
+- Se é interação técnica com a aplicação, vai para `resources/apps/`.
+- Se é dado, locator ou constante, vai para `resources/data/`.
 
 ---
 

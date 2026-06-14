@@ -4,6 +4,6 @@ Resource            ../../resources/apps/uauxt.resource
 Test Tags           examples    uauxt
 
 *** Test Cases ***
-Exemplo Login UauXT Com Popup Inicial
-    [Documentation]    Abre o executavel UauXT, confirma o popup inicial, preenche usuario e senha e autentica.
+Autenticar No UauXT
+    [Documentation]    Abre o executavel UauXT e autentica o usuario após confirmar o popup inicial.
     Abrir E Logar No UauXT

@@ -12,11 +12,10 @@ ${CODIGO_CONTA}                      12345-6
 
 
 *** Test Cases ***
-Alterar Banco E Conta Do Pagamento No Grid
-    [Documentation]    Considera a tela ja aberta com dados carregados no grid de Processos de pagamento.
-    ...                Fluxo: abre popup de banco na coluna 15 da linha 1 -> digita codigo do banco ->
-    ...                confirma -> move para coluna de conta -> digita codigo da conta -> confirma.
-    Log    [CONTAS_PAGAR] Iniciando alteracao de banco e conta na linha ${LINHA_ALVO}...    console=True
+Atualizar Dados Bancarios Do Pagamento
+    [Documentation]    Atualiza os dados bancarios do pagamento no grid de Processos de pagamento.
+    ...                Considera a tela ja aberta com dados carregados.
+    Log    [CONTAS_PAGAR] Iniciando atualizacao dos dados bancarios na linha ${LINHA_ALVO}...    console=True
     Alterar Banco Do Processo    ${LINHA_ALVO}    ${CODIGO_BANCO}
     Alterar Conta Do Processo    ${LINHA_ALVO}    ${CODIGO_CONTA}
-    Log    [CONTAS_PAGAR] Banco e conta alterados com sucesso na linha ${LINHA_ALVO}.    console=True
+    Log    [CONTAS_PAGAR] Dados bancarios atualizados com sucesso na linha ${LINHA_ALVO}.    console=True

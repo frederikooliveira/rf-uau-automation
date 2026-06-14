@@ -49,22 +49,22 @@ ${CONTAS_PAGAR_DATA_INICIAL_PADRAO}           01/01/2022
 #   [18] → Acompanhamento de fluxo BPM
 #
 # Para re-mapear: .venv\Scripts\python.exe resources/scripts/uauxt_probe.py map-toolbar-buttons --toolbar-index 0 --pretty
-${CONTAS_PAGAR_TOOLBAR_ACOES_LOCATOR}                   class:msvb_lib_toolbar
-${CONTAS_PAGAR_TOOLBAR_NOVO_INDEX}                      0
-${CONTAS_PAGAR_TOOLBAR_CONFIRMAR_PARCELA_INDEX}         2
-${CONTAS_PAGAR_TOOLBAR_MANUTENCAO_INDEX}                3
-${CONTAS_PAGAR_TOOLBAR_VINCULO_PL_INDEX}                4
-${CONTAS_PAGAR_TOOLBAR_PROTOCOLO_INDEX}                 5
-${CONTAS_PAGAR_TOOLBAR_FILTRAR_NOTA_FISCAL_INDEX}       7
-${CONTAS_PAGAR_TOOLBAR_IMPRIMIR_SOLICITACAO_INDEX}      8
-${CONTAS_PAGAR_TOOLBAR_IMPRIMIR_DROPDOWN_INDEX}         9
-${CONTAS_PAGAR_TOOLBAR_GERAR_NFE_INDEX}                 10
-${CONTAS_PAGAR_TOOLBAR_DEVOLUCAO_INDEX}                 11
-${CONTAS_PAGAR_TOOLBAR_CHAVES_PIX_INDEX}                13
-${CONTAS_PAGAR_TOOLBAR_FILTRAR_PROCESSOS_INDEX}         14
-${CONTAS_PAGAR_TOOLBAR_HISTORICO_DVQ_INDEX}             15
-${CONTAS_PAGAR_TOOLBAR_ASSINATURA_DIGITAL_INDEX}        17
-${CONTAS_PAGAR_TOOLBAR_BPM_INDEX}                       18
+${CONTAS_PAGAR_TLB_ACOES_LOCATOR}                   class:msvb_lib_toolbar
+${CONTAS_PAGAR_TLB_NOVO_IDX}                      0
+${CONTAS_PAGAR_TLB_CONFIRMAR_PARCELA_IDX}         2
+${CONTAS_PAGAR_TLB_MANUTENCAO_IDX}                3
+${CONTAS_PAGAR_TLB_VINCULO_PL_IDX}                4
+${CONTAS_PAGAR_TLB_PROTOCOLO_IDX}                 5
+${CONTAS_PAGAR_TLB_FILTRAR_NOTA_FISCAL_IDX}       7
+${CONTAS_PAGAR_TLB_IMPRIMIR_SOLICITACAO_IDX}      8
+${CONTAS_PAGAR_TLB_IMPRIMIR_DROPDOWN_IDX}         9
+${CONTAS_PAGAR_TLB_GERAR_NFE_IDX}                 10
+${CONTAS_PAGAR_TLB_DEVOLUCAO_IDX}                 11
+${CONTAS_PAGAR_TLB_CHAVES_PIX_IDX}                13
+${CONTAS_PAGAR_TLB_FILTRAR_PROCESSOS_IDX}         14
+${CONTAS_PAGAR_TLB_HISTORICO_DVQ_IDX}             15
+${CONTAS_PAGAR_TLB_ASSINATURA_DIGITAL_IDX}        17
+${CONTAS_PAGAR_TLB_BPM_IDX}                       18
 
 # --- Menu dropdown do botão Imprimir (navegacao por teclado — VB6 popup nao expoe UIA) ---
 # Apos clicar o sidebutton (x_pct=0.85 no idx=8), enviar {DOWN} + {ENTER} para selecionar "Nota de debito".
@@ -75,5 +75,5 @@ ${CONTAS_PAGAR_TOOLBAR_BPM_INDEX}                       18
 #   [1]  → Análise do contas a pagar
 #
 # Para re-mapear: .venv\Scripts\python.exe resources/scripts/uauxt_probe.py map-toolbar-buttons --toolbar-index 1 --pretty
-${CONTAS_PAGAR_TOOLBAR_VISOES_PROCESSOS_INDEX}          0
-${CONTAS_PAGAR_TOOLBAR_VISOES_ANALISE_INDEX}            1
+${CONTAS_PAGAR_TLB_VISOES_PROCESSOS_IDX}          0
+${CONTAS_PAGAR_TLB_VISOES_ANALISE_IDX}            1

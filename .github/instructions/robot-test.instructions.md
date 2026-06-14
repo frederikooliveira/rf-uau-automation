@@ -5,6 +5,12 @@ applyTo: "tests/**/*.robot"
 
 # Robot Framework — Padrão de testes
 
+## Onde criar testes
+
+- Padrão para testes de fluxo real: `tests/flows/<contexto>/`
+- `tests/90_examples/` somente para exemplos e diagnósticos solicitados explicitamente
+- Não criar testes de fluxo real em `tests/90_examples/`
+
 ## Estrutura obrigatória
 
 ```robot
@@ -60,6 +66,10 @@ ${VARIAVEL_TESTE}    valor
 | `contas-pagar` | Testes de Contas a Pagar |
 | `diagnostico` | Testes exploratórios/diagnóstico |
 
+Regra adicional:
+- Em `tests/flows/`, não usar `examples` por padrão.
+- Em `tests/90_examples/`, incluir `examples`.
+
 ## Variáveis
 
 - Sempre declarar em `*** Variables ***`, nunca hardcodadas no corpo do teste
@@ -103,7 +113,7 @@ Permitido criar `*** Keywords ***` no arquivo de teste **somente** para:
 ## Nomenclatura de arquivos
 
 Padrão: `NN_nome_descritivo.robot`  
-Exemplos: `09_fluxo_completo_contas_pagar_dvq.robot`, `13_abrir_vinculos_nota_fiscal_no_grid.robot`
+Exemplos: `09_contas_pagar_preencher_confirmado_dvq.robot`, `13_contas_pagar_abrir_vinculos_nota_fiscal.robot`
 
 ## Anti-patterns
 

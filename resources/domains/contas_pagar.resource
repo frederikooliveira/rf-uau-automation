@@ -1,8 +1,8 @@
-*** Settings ***
+﻿*** Settings ***
 Documentation       Keywords de dominio de negocio para Contas a Pagar.
 ...                 Responsabilidade: fluxos de negocio (nao UI tecnica).
-Library             String
 Library             Collections
+Library             String
 Resource            ../apps/uauxt.resource
 Resource            ../apps/uauxt_grid.resource
 Resource            ../data/contas_pagar_data.resource
@@ -21,9 +21,10 @@ Selecionar Empresa E Obra
     [Arguments]    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
     Validar Locator Configurado    ${CONTAS_PAGAR_BOTAO_EMPRESA_OBRA_LOCATOR}    CONTAS_PAGAR_BOTAO_EMPRESA_OBRA_LOCATOR
     Log    [DOM-CP] Abrindo seletor de empresa e obra...    console=True
-    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Click    ${CONTAS_PAGAR_BOTAO_EMPRESA_OBRA_LOCATOR}
-    Pausa Controlada    500ms    Aguardando dialogo de empresa/obra abrir
+    Abrir Seletor Empresa E Obra
+    ...    ${CONTAS_PAGAR_BOTAO_EMPRESA_OBRA_LOCATOR}
+    ...    ${CONTAS_PAGAR_POPUP_EMPRESA_LOCATOR}
+    ...    ${timeout}
     Log    [DOM-CP] Dialogo de empresa/obra aberto.    console=True
 
 Selecionar Empresa No Popup
@@ -31,23 +32,23 @@ Selecionar Empresa No Popup
     ...                por duplo clique no cabecalho Empresa.
     [Arguments]    ${valor_empresa}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
     Validar Locator Configurado    ${CONTAS_PAGAR_POPUP_EMPRESA_LOCATOR}    CONTAS_PAGAR_POPUP_EMPRESA_LOCATOR
-    Validar Locator Configurado    ${CONTAS_PAGAR_GRID_EMPRESA_HEADER_LOCATOR}    CONTAS_PAGAR_GRID_EMPRESA_HEADER_LOCATOR
-    Log    [DOM-CP] Aguardando popup de selecao de empresa...    console=True
-    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Control Window    ${CONTAS_PAGAR_POPUP_EMPRESA_LOCATOR}
-    Log    [DOM-CP] Digitando codigo da empresa: '${valor_empresa}'...    console=True
-    Send Keys    keys=${valor_empresa}
-    Pausa Controlada    500ms    Aguardando filtro ser aplicado
-    Double Click    ${CONTAS_PAGAR_GRID_EMPRESA_HEADER_LOCATOR}
+    Validar Locator Configurado
+    ...    ${CONTAS_PAGAR_GRID_EMPRESA_HEADER_LOCATOR}
+    ...    GRID_EMPRESA_HEADER_LOCATOR
+    Selecionar Empresa No Popup Empresa Obra
+    ...    ${CONTAS_PAGAR_POPUP_EMPRESA_LOCATOR}
+    ...    ${CONTAS_PAGAR_GRID_EMPRESA_HEADER_LOCATOR}
+    ...    ${valor_empresa}
+    ...    ${timeout}
     Log    [DOM-CP] Empresa '${valor_empresa}' selecionada.    console=True
 
 Configurar Periodo Prorrogacao
     [Documentation]    Configura periodo de prorrogacao (data inicial ate data atual) e executa busca.
-    [Arguments]    ${data_inicial}=${CONTAS_PAGAR_DATA_INICIAL_PADRAO}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
+    [Arguments]    ${data_inicial}=${CONTAS_PAGAR_DATA_INICIAL_PADRAO}
     ${data_atual}=    Evaluate    datetime.datetime.now().strftime('%d/%m/%Y')    modules=datetime
     Log    [DOM-CP] Configurando periodo ${data_inicial} ate ${data_atual}...    console=True
-    ${locator_inicial}=    Aguardar Campo Data Por Tipo    inicial    ${timeout}
-    ${locator_final}=    Aguardar Campo Data Por Tipo    final    ${timeout}
+    ${locator_inicial}=    Aguardar Campo Data Por Tipo    inicial
+    ${locator_final}=    Aguardar Campo Data Por Tipo    final
     Preencher Campo De Data    ${locator_inicial}    ${data_inicial}    inicial
     Preencher Campo De Data    ${locator_final}    ${data_atual}    final
     Executar Busca
@@ -55,7 +56,7 @@ Configurar Periodo Prorrogacao
 
 Aguardar Campo Data Por Tipo
     [Documentation]    Resolve e aguarda locator do campo de data (inicial/final) com fallback.
-    [Arguments]    ${tipo_campo}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
+    [Arguments]    ${tipo_campo}
     Log    [DOM-CP] Resolvendo campo de data '${tipo_campo}'...    console=True
     @{locators}=    Obter Locators Campo Data    ${tipo_campo}
     FOR    ${locator}    IN    @{locators}
@@ -116,16 +117,20 @@ Executar Busca
     Fail    Botao Buscar nao localizado. Revise locators em contas_pagar_data.resource.
 
 Preencher Confirmado Por Faixa
-    [Documentation]    Preenche a coluna Confirmado do grid de Processos de pagamento para uma faixa de linhas.
+    [Documentation]    Preenche a coluna Confirmado no grid para uma faixa de linhas.
     [Arguments]    ${valor}    ${linha_inicial}    ${linha_final}
-    Log    [DOM-CP] Preenchendo '${valor}' na coluna Confirmado, linhas ${linha_inicial}..${linha_final}...    console=True
+    Log
+    ...    [DOM-CP] Preenchendo '${valor}' na coluna Confirmado, linhas ${linha_inicial}..${linha_final}...
+    ...    console=True
     ${payload}=    Alterar Celulas No Grid Processos Pagamento Por Faixa De Linhas
     ...    ${CONTAS_PAGAR_COLUNA_CONFIRMADO}
     ...    ${valor}
     ...    ${linha_inicial}
     ...    ${linha_final}
     ${ok}=    Get From Dictionary    ${payload}    ok
-    Should Be True    ${ok}    Preenchimento de '${valor}' na coluna Confirmado falhou (faixa ${linha_inicial}..${linha_final}).
+    Should Be True
+    ...    ${ok}
+    ...    Falha ao preencher '${valor}' na coluna Confirmado (${linha_inicial}..${linha_final}).
     Log    [DOM-CP] Coluna Confirmado preenchida com '${valor}'.    console=True
 
 Alterar Banco Do Processo
@@ -160,14 +165,15 @@ Alterar Conta Do Processo
     Pausa Controlada    300ms    Aguardando filtro da conta
     Send Keys    keys={ENTER}
     Pausa Controlada    500ms    Aguardando confirmacao e retorno ao grid
-    Log    [DOM-CP] Conta '${codigo_conta}' selecionada na linha ${row_index}.    console=True
+    Log    [DOM-CP] Conta '${codigo_conta}' selecionada (linha ${row_index}).    console=True
 
 Clicar Botao Na Toolbar Acoes
     [Documentation]    Clica em botao da toolbar de acoes (msvb_lib_toolbar) pelo indice 0-based.
     ...                Indices mapeados em contas_pagar_data.resource (ex.: CONTAS_PAGAR_TOOLBAR_MANUTENCAO_INDEX).
     ...                Use keyword 'Listar Botoes Toolbar Via Probe' para descobrir novos indices.
-    ...                click_x_pct: fracao horizontal do clique no rect do botao (0.5=centro, 0.85=borda direita/dropdown).
-    [Arguments]    ${button_index}    ${timeout}=10s    ${click_x_pct}=0.5
+    ...                click_x_pct: fracao horizontal do clique no rect do botao.
+    ...                Ex.: 0.5=centro, 0.85=borda direita/dropdown.
+    [Arguments]    ${button_index}    ${click_x_pct}=0.5
     Log    [DOM-CP] Clicando botao toolbar idx=${button_index} (x_pct=${click_x_pct}) via probe Win32...    console=True
     Clicar Botao Toolbar Por Indice Via Probe    ${button_index}    click_x_pct=${click_x_pct}
     Log    [DOM-CP] Botao idx=${button_index} clicado com sucesso.    console=True
@@ -175,21 +181,21 @@ Clicar Botao Na Toolbar Acoes
 Selecionar Linha E Clicar Toolbar
     [Documentation]    Seleciona uma linha no grid de Processos de pagamento e clica em um botao da toolbar de acoes.
     ...                button_index: indice 0-based do botao na toolbar (veja contas_pagar_data.resource).
-    [Arguments]    ${row_index}    ${button_index}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
+    [Arguments]    ${row_index}    ${button_index}
     Log    [DOM-CP] Selecionando linha ${row_index} e acionando toolbar idx=${button_index}...    console=True
     Selecionar Linha No Grid Processos Pagamento    ${row_index}
     Pausa Controlada    300ms    Aguardando selecao da linha
-    Clicar Botao Na Toolbar Acoes    ${button_index}    ${timeout}
+    Clicar Botao Na Toolbar Acoes    ${button_index}
     Log    [DOM-CP] Toolbar idx=${button_index} acionada para linha ${row_index}.    console=True
 
 Clicar Dropdown Imprimir E Selecionar Nota Debito
     [Documentation]    Abre o menu dropdown do botao Imprimir clicando na borda direita (sidebutton/split-button)
     ...                e seleciona a opcao "Nota de debito" via teclado (DOWN + ENTER).
-    ...                Menus popup VB6 nao expõem elementos via UIA — navegacao por teclado e obrigatoria.
+    ...                Menus popup VB6 nao expÃµem elementos via UIA â€” navegacao por teclado e obrigatoria.
     ...                Como ha apenas uma opcao no submenu, um DOWN e suficiente para selecionar.
     ...                Pre-requisito: linha ja selecionada no grid.
     Log    [DOM-CP] Abrindo dropdown do botao Imprimir (split-button, x_pct=0.85)...    console=True
-    Clicar Botao Na Toolbar Acoes    ${CONTAS_PAGAR_TOOLBAR_IMPRIMIR_SOLICITACAO_INDEX}    click_x_pct=0.85
+    Clicar Botao Na Toolbar Acoes    ${CONTAS_PAGAR_TLB_IMPRIMIR_SOLICITACAO_IDX}    click_x_pct=0.85
     Pausa Controlada    400ms    Aguardando menu dropdown abrir
     Log    [DOM-CP] Selecionando primeira opcao do menu via teclado (DOWN + ENTER)...    console=True
     Send Keys    keys={DOWN}
@@ -201,7 +207,7 @@ Clicar Dropdown Imprimir E Selecionar Nota Debito
 Selecionar Linha E Imprimir Nota Debito
     [Documentation]    Seleciona uma linha no grid de Processos de pagamento e aciona a impressao
     ...                de nota de debito via dropdown do botao Imprimir.
-    [Arguments]    ${row_index}    ${timeout}=${CONTAS_PAGAR_TIMEOUT_PADRAO}
+    [Arguments]    ${row_index}
     Log    [DOM-CP] Selecionando linha ${row_index} para impressao de nota de debito...    console=True
     Selecionar Linha No Grid Processos Pagamento    ${row_index}
     Pausa Controlada    300ms    Aguardando selecao da linha

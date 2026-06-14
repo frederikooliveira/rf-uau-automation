@@ -71,6 +71,14 @@ Nunca usar `Sleep` arbitrário. Usar keywords de `sync.resource`:
 - `Aguardar Elemento Com Log    ${locator}    descricao`
 - `Aguardar Popup Informa`
 
+## Centralizacao de probe (anti-duplicacao)
+
+- Operacoes Win32 reutilizaveis (grid/toolbar) devem ficar concentradas em `resources/apps/uauxt_grid.resource`.
+- Em `resources/apps/<app>.resource`, evitar implementar um segundo caminho tecnico para a mesma acao.
+- Antes de criar keyword nova em app, verificar se ja existe equivalente em `uauxt_grid.resource`.
+- Se existir equivalente, reutilizar via domain em vez de duplicar `Run Process` para `uauxt_probe.py`.
+- Novos comandos do probe devem ser expostos primeiro em `uauxt_grid.resource` e so depois consumidos por domains/apps.
+
 ## Anti-patterns
 
 - **Proibido**: importar `resources/domains/*`
@@ -78,3 +86,4 @@ Nunca usar `Sleep` arbitrário. Usar keywords de `sync.resource`:
 - **Proibido**: locators hardcodados — centralizar em `resources/data/<contexto>_data.resource`
 - **Proibido**: `RPA.Images`, OCR, screenshot matching
 - **Proibido**: `Sleep` sem justificativa — usar `Pausa Controlada`
+- **Proibido**: duplicar chamada de probe (`Run Process` + `uauxt_probe.py`) em multiplos resources para a mesma acao

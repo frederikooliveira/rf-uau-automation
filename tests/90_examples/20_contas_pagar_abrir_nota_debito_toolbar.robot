@@ -5,6 +5,7 @@ Documentation       Exemplo de impressao de nota de debito via sidebutton (dropd
 ...                 menu com a opcao "Nota de debito".
 ...                 Pre-requisito: estar na tela de Contas a Pagar com registros carregados no grid.
 Resource            ../../resources/domains/contas_pagar.resource
+Resource            ../../resources/data/contas_pagar_data.resource
 Test Tags           examples    uauxt    contas-pagar    toolbar-acoes    imprimir-nota-debito
 
 

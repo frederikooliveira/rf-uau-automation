@@ -30,6 +30,10 @@ ${CONTEXTO_DADO_PADRAO}               valor_padrao
 
 ## Nomenclatura de variáveis
 
+Regra obrigatoria para este repositorio:
+- Nome de variavel com no maximo 40 caracteres (sem contar `${` e `}`).
+- Se exceder 40, abreviar mantendo contexto legivel (ex.: `DEMONSTRATIVO` -> `RELDEM`, `TOOLBAR` -> `TB`, `INDEX` -> `IDX`).
+
 | Tipo | Padrão | Exemplo |
 |------|--------|---------|
 | Locator UI | `${CONTEXTO_CAMPO_LOCATOR}` | `${CAMPO_NOME_PESSOA_LOCATOR}` |

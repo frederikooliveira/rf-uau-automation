@@ -9,7 +9,7 @@ Test Tags           examples    uauxt    diagnostico    dvq-grid
 *** Variables ***
 ${COLUNA_CONFIRMADO}               5
 ${VALOR_DVQ}                       DVQ
-${LINHA_INICIAL_DVQ}               2
+${LINHA_INICIAL_DVQ}               1
 ${LINHA_FINAL_DVQ}                 3
 
 

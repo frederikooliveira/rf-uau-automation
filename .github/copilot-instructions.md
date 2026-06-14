@@ -27,6 +27,7 @@ Dependencias entre camadas:
 - Arquivos data: <contexto>_data.resource
 - Testes: NN_nome_descritivo.robot (ex.: 01_baixar_versao.robot)
 - Keywords: iniciar com verbo e nome descritivo
+- Variaveis Robot: nome com no maximo 40 caracteres (sem contar `${` e `}`)
 
 ## Padrao para novos locators
 
@@ -54,3 +55,4 @@ Dependencias entre camadas:
 - Logs com prefixo de contexto (ex.: [COMP], [UAUXT], [DOM-PESSOAS])
 - Sem uso de automacao por imagem
 - Mudancas pequenas e focadas no objetivo
+- Sem duplicacao de probe: reutilizar `resources/apps/uauxt_grid.resource` para acoes Win32 de grid/toolbar

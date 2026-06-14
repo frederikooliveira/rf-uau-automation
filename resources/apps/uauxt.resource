@@ -54,7 +54,8 @@ Abrir UauXT E Confirmar Popup Inicial
     [Documentation]    Abre UauXT e confirma o popup de aviso inicial.
     [Arguments]    ${caminho_exe}=${UAUXT_EXE}
     Abrir UauXT    ${caminho_exe}
-    #Aguardar Popup UauXT E Clicar OK
+    # Aguardar Popup UauXT E Clicar OK
+
     Log    [UAUXT] UauXT aberto e popup inicial confirmado.    console=True
 
 Preencher Login UauXT
@@ -102,14 +103,44 @@ Abrir E Logar No UauXT
     Abrir UauXT, Confirmar Popup E Preencher Login    ${caminho_exe}    ${credenciais}
     Log    [UAUXT] Sistema pronto para uso.    console=True
 
+Abrir Seletor Empresa E Obra
+    [Documentation]    Clica no botao de empresa/obra e aguarda abertura do popup de selecao.
+    [Arguments]    ${botao_empresa_obra_locator}    ${popup_empresa_obra_locator}
+    ...    ${timeout}=${UAUXT_TIMEOUT_PADRAO}
+    Log    [UAUXT] Abrindo seletor de empresa e obra...    console=True
+    Wait Until Keyword Succeeds    ${timeout}    1s
+    ...    Click    ${botao_empresa_obra_locator}
+    Pausa Controlada    500ms    Aguardando dialogo de empresa/obra abrir
+    Wait Until Keyword Succeeds    ${timeout}    1s
+    ...    Control Window    ${popup_empresa_obra_locator}
+    Log    [UAUXT] Dialogo de empresa/obra aberto.    console=True
+
+Selecionar Empresa No Popup Empresa Obra
+    [Documentation]    No popup de empresa/obra, digita o codigo da empresa e aplica no grid pelo cabecalho Empresa.
+    [Arguments]    ${popup_empresa_obra_locator}    ${grid_empresa_header_locator}    ${codigo_empresa}
+    ...    ${timeout}=${UAUXT_TIMEOUT_PADRAO}
+    Log    [UAUXT] Selecionando empresa '${codigo_empresa}' no popup...    console=True
+    Wait Until Keyword Succeeds    ${timeout}    1s
+    ...    Control Window    ${popup_empresa_obra_locator}
+    Send Keys    keys=${codigo_empresa}
+    Pausa Controlada    500ms    Aguardando filtro ser aplicado
+    Double Click    ${grid_empresa_header_locator}
+    Log    [UAUXT] Empresa '${codigo_empresa}' selecionada no popup.    console=True
+
 # === NAVEGAÇÃO E MENUS ===
 
 Focar No Menu Lateral Angular UauXT
     [Documentation]    Foca no menu lateral Angular/CefSharp do UauXT.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
     Log    [UAUXT] Focando menu lateral Angular...    console=True
-    Wait Until Keyword Succeeds    ${timeout}    1s
+    ${mainview_ok}=    Run Keyword And Return Status
+    ...    Wait Until Keyword Succeeds    ${timeout}    1s
     ...    Control Window    id:MainView and type:WindowControl
+    IF    not ${mainview_ok}
+        Log    [UAUXT] MainView indisponivel. Tentando foco por classe da janela principal.    console=True
+        Wait Until Keyword Succeeds    ${timeout}    1s
+        ...    Control Window    type:WindowControl and class:WindowsForms10.Window.8.app.0.2dac507_r7_ad1
+    END
     Wait Until Keyword Succeeds    ${timeout}    1s
     ...    Click    ${UAUXT_MENU_LATERAL_DOCUMENTO}
     Log    [UAUXT] Menu lateral Angular em foco.    console=True
@@ -313,6 +344,37 @@ Acessar Contas A Pagar Via Icone Maleta
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
     Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
     Acessar Contas A Pagar Via Icone Capacete Obras    ${timeout}
+
+Acessar Item Via Icone Capacete Obras
+    [Documentation]    Padrao de acesso: capacete de obras > nivel 1 > nivel 2 > nivel 3.
+    [Arguments]    ${submenu_nivel_1}    ${submenu_nivel_2}    ${submenu_nivel_3}
+    ...    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Clicar Icone Capacete Obras    ${timeout}
+    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_1}    ${timeout}
+    Pausa Controlada    100ms    Aguardando expansao do submenu ${submenu_nivel_1}
+    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_2}    ${timeout}
+    Pausa Controlada    100ms    Aguardando expansao do submenu ${submenu_nivel_2}
+    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_3}    ${timeout}
+
+Acessar Emissao De Pagamentos Via Icone Capacete Obras
+    [Documentation]    Estrategia padrao: capacete de obras > Financeiro > Gestao financeira > Emissao de pagamentos.
+    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Acessar Item Via Icone Capacete Obras
+    ...    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}
+    ...    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}
+    ...    ${UAUXT_SUBMENU_EMISSAO_PAGAMENTOS_TEXTO}
+    ...    ${timeout}
+    Log    [UAUXT] Navegacao por capacete de obras ate Emissao de pagamentos concluida.    console=True
+
+Acessar Resumo De Venda Via Menu Lateral
+    [Documentation]    Estrategia padrao: Vendas > Gestao de Vendas > Resumo de venda com fallback.
+    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Acessar Item Via Icone Capacete Obras
+    ...    ${UAUXT_SUBMENU_VENDAS_TEXTO}
+    ...    ${UAUXT_SUBMENU_GESTAO_VENDAS_TEXTO}
+    ...    ${UAUXT_SUBMENU_RESUMO_VENDA_TEXTO}
+    ...    ${timeout}
+    Log    [UAUXT] Navegacao ate Resumo de venda concluida.    console=True
 
 Capturar E Imprimir WebBrowser Menu Lateral
     [Documentation]    Captura e imprime a arvore do MenuXt/wbBrowser e lista icones TextControl para mapear glyph/posicao.

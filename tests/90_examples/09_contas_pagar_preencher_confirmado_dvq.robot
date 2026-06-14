@@ -13,9 +13,9 @@ ${LINHA_FINAL_DVQ}                   1
 
 
 *** Test Cases ***
-Exemplo Fluxo Completo Contas Pagar Com DVQ
-    [Documentation]    Abre/loga no UauXT, acessa Contas a Pagar, filtra dados e preenche DVQ.
-    Log    [EXEMPLO] Iniciando fluxo completo (login > menu > filtro > DVQ)...    console=True
+Preencher Confirmado No Grid De Processos De Pagamento
+    [Documentation]    Preenche o campo Confirmado no grid de Processos de pagamento.
+    Log    [EXEMPLO] Iniciando preenchimento do Confirmado no grid de Processos de pagamento...    console=True
     Abrir E Logar No UauXT
     Pausa Controlada    10s    Aguardando carregamento completo apos login
     Acessar Contas A Pagar Via Icone Capacete Obras
@@ -24,5 +24,4 @@ Exemplo Fluxo Completo Contas Pagar Com DVQ
     Pausa Controlada    1s    Aguardando processamento do filtro de empresa
     Configurar Periodo Prorrogacao
     Preencher Confirmado Por Faixa    ${VALOR_CONFIRMADO}    ${LINHA_INICIAL_DVQ}    ${LINHA_FINAL_DVQ}
-    Log    [EXEMPLO] Fluxo completo concluido com sucesso.    console=True
-
+    Log    [EXEMPLO] Preenchimento do Confirmado no grid concluido com sucesso.    console=True
