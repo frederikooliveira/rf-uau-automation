@@ -14,6 +14,8 @@ ${API_TIMEOUT_SEC}          30
 ${API_AUTH_TIMEOUT_SEC}     60
 ${API_EXPECTED_STATUS}      200
 ${API_AUTH_OK_STATUS}       200
+${API_TLS_INSECURE}         false
+${API_CA_BUNDLE}            ${EMPTY}
 
 # --- Credenciais e autenticacao ---
 ${API_X_AUTH}               ${EMPTY}

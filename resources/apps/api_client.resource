@@ -42,9 +42,25 @@ Criar Sessao Api Padrao
     [Documentation]    Cria sessao HTTP padrao para a URL base configurada.
     ${base_url}=    Get Environment Variable    API_BASE_URL    ${API_BASE_URL}
     ${timeout}=    Get Environment Variable    API_TIMEOUT    ${API_TIMEOUT_SEC}
+    ${tls_insecure}=    Get Environment Variable    API_TLS_INSECURE    ${API_TLS_INSECURE}
+    ${ca_bundle}=    Get Environment Variable    API_CA_BUNDLE    ${API_CA_BUNDLE}
+    ${verify}=    Resolver Verificacao Tls Api    ${tls_insecure}    ${ca_bundle}
     ${headers}=    Montar Headers Api
-    Create Session    api    ${base_url}    headers=${headers}    timeout=${timeout}
+    Create Session    api    ${base_url}    headers=${headers}    timeout=${timeout}    verify=${verify}
     Log    [API] Sessao HTTP criada.    console=True
+
+Resolver Verificacao Tls Api
+    [Documentation]    Resolve politica de verificacao TLS para a sessao HTTP.
+    [Arguments]    ${tls_insecure}    ${ca_bundle}
+    ${mode}=    Evaluate    str($tls_insecure).strip().lower()
+    ${verify}=    Set Variable    ${True}
+    IF    '${mode}' == '1' or '${mode}' == 'true' or '${mode}' == 'yes'
+        ${verify}=    Set Variable    ${False}
+        Log    [API] Aviso: TLS inseguro habilitado por API_TLS_INSECURE.    console=True
+    ELSE IF    '${ca_bundle}' != ''
+        ${verify}=    Set Variable    ${ca_bundle}
+    END
+    RETURN    ${verify}
 
 Consultar Endpoint Api
     [Documentation]    Executa GET no endpoint relativo informado e retorna resposta.
