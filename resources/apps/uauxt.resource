@@ -130,163 +130,43 @@ Selecionar Empresa No Popup Empresa Obra
 # === NAVEGAÇÃO E MENUS ===
 
 Focar No Menu Lateral Angular UauXT
-    [Documentation]    Foca no menu lateral Angular/CefSharp do UauXT.
+    [Documentation]    Foca no menu lateral Angular do UauXT.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Focando menu lateral Angular...    console=True
-    ${mainview_ok}=    Run Keyword And Return Status
-    ...    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Control Window    id:MainView and type:WindowControl
-    IF    not ${mainview_ok}
-        Log    [UAUXT] MainView indisponivel. Tentando foco por classe da janela principal.    console=True
-        Wait Until Keyword Succeeds    ${timeout}    1s
-        ...    Control Window    type:WindowControl and class:WindowsForms10.Window.8.app.0.2dac507_r7_ad1
-    END
+    Log    [UAUXT] Focando menu lateral...    console=True
     Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Click    ${UAUXT_MENU_LATERAL_DOCUMENTO}
-    Log    [UAUXT] Menu lateral Angular em foco.    console=True
-
-Selecionar Icone Menu Lateral Por Indice
-    [Documentation]    Seleciona um icone do menu lateral pelo indice (1..N).
-    [Arguments]    ${indice}=${UAUXT_MENU_FINANCEIRO_INDICE}
-    Focar No Menu Lateral Angular UauXT
-    Log    [UAUXT] Selecionando icone ${indice} do menu lateral...    console=True
-    ${icone}=    Obter Icone Menu Lateral Por Ordem Vertical    ${indice}
-    Click    ${icone}
-    Pausa Controlada    700ms    Aguardando abertura dos submenus do icone selecionado
-    Log    [UAUXT] Icone ${indice} selecionado.    console=True
-
-Selecionar Icone Menu Lateral Por Glyph
-    [Documentation]    Seleciona um icone da coluna lateral pelo glyph (simbolo visual no TextControl).
-    [Arguments]    ${glyph}
-    Focar No Menu Lateral Angular UauXT
-    ${icones_coluna}=    Obter Icones Da Coluna Lateral
-    ${expr_glyph}=    Catenate    SEPARATOR=${EMPTY}
-    ...    [e for e in $icones_coluna if getattr(e, 'name', '') == '${glyph}']
-    ${candidatos}=    Evaluate    ${expr_glyph}
-    ${total}=    Get Length    ${candidatos}
-    IF    ${total} < 1
-        Fail    Nao foi possivel localizar icone com glyph '${glyph}' na coluna lateral.
+    ...    Control Window    id:MainView and type:WindowControl
+    ${focou_menu}=    Run Keyword And Return Status
+    ...    Wait Until Keyword Succeeds    ${timeout}    300ms
+    ...    Click    ${UAUXT_MENU_LATERAL_BROWSER}
+    IF    not ${focou_menu}
+        ${focou_menu}=    Run Keyword And Return Status
+        ...    Wait Until Keyword Succeeds    ${timeout}    300ms
+        ...    Click    ${UAUXT_MENU_LATERAL_HOST}
     END
-    ${icone}=    Get From List    ${candidatos}    0
-    Click    ${icone}
-    Pausa Controlada    700ms    Aguardando abertura dos submenus do glyph selecionado
-    Log    [UAUXT] Icone com glyph '${glyph}' selecionado.    console=True
+    IF    not ${focou_menu}
+        Fail    Nao foi possivel focar no menu lateral (wbBrowser/MenuXt).
+    END
+    Log    [UAUXT] Menu lateral em foco.    console=True
 
-Selecionar Menu Lateral Por Texto
-    [Documentation]    Seleciona item de menu lateral por texto visivel (sem automacao por imagem).
-    [Arguments]    ${texto}    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Selecionar Submenu Aberto Por Nome    ${texto}    ${timeout}
-
-Selecionar Submenu Aberto Por Nome
-    [Documentation]    Seleciona submenu visivel por nome apos abrir o menu lateral.
-    [Arguments]    ${nome_submenu}    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Selecionando submenu por nome: ${nome_submenu}    console=True
-    ${status}    ${candidatos}=    Run Keyword And Ignore Error
-    ...    Get Elements    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:TextControl    search_depth=20    siblings_only=${False}
-    IF    '${status}' == 'PASS'
-        ${nome_submenu_normalizado}=    Evaluate    '''${nome_submenu}'''.lower()
-        ${expr_visiveis}=    Catenate    SEPARATOR=${EMPTY}
-        ...    sorted([e for e in $candidatos if getattr(e, 'name', '') and '${nome_submenu_normalizado}' in e.name.lower() and e.width > 5 and e.height > 5], key=lambda x: (x.top, x.left))
-        ${candidatos_visiveis}=    Evaluate    ${expr_visiveis}
-        ${total}=    Get Length    ${candidatos_visiveis}
-        IF    ${total} > 0
-            ${submenu}=    Get From List    ${candidatos_visiveis}    0
-            Click    ${submenu}
-            Log    [UAUXT] Submenu '${nome_submenu}' selecionado por busca profunda.    console=True
-            RETURN
-        END
-    END
-    ${clicou}=    Run Keyword And Return Status
-    ...    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Click    subname:${nome_submenu} and type:MenuItemControl
-    IF    not ${clicou}
-        ${clicou}=    Run Keyword And Return Status
-        ...    Wait Until Keyword Succeeds    ${timeout}    1s
-        ...    Click    subname:${nome_submenu} and type:TextControl
-    END
-    IF    not ${clicou}
-        ${clicou}=    Run Keyword And Return Status
-        ...    Wait Until Keyword Succeeds    ${timeout}    1s
-        ...    Click    subname:${nome_submenu} and type:ButtonControl
-    END
-    IF    not ${clicou}
-        Print Tree    ${UAUXT_MENU_LATERAL_DOCUMENTO}    max_depth=16    log_as_warnings=True
-        Fail    Nao foi possivel selecionar submenu '${nome_submenu}'.
-    END
-    Log    [UAUXT] Submenu '${nome_submenu}' selecionado.    console=True
-
-Selecionar Item Menu Lateral Angular Por Nome
-    [Documentation]    Seleciona item no menu lateral Angular/CefSharp com fallback de locators.
-    [Arguments]    ${nome_item}    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Selecionando item do menu lateral: ${nome_item}    console=True
-    Focar No Menu Lateral Angular UauXT    ${timeout}
-    @{locators}=    Create List
-    ...    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:TreeItemControl and subname:${nome_item}
-    ...    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:ListItemControl and subname:${nome_item}
-    ...    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:MenuItemControl and subname:${nome_item}
-    ...    type:TreeItemControl and subname:${nome_item}
-    ...    type:ListItemControl and subname:${nome_item}
-    ...    type:MenuItemControl and subname:${nome_item}
-    ...    subname:${nome_item} and type:TextControl
-    ...    subname:${nome_item} and type:ButtonControl
-    ${clicou}=    Set Variable    ${False}
-    FOR    ${locator}    IN    @{locators}
-        ${clicou}=    Run Keyword And Return Status
-        ...    Wait Until Keyword Succeeds    2s    300ms
-        ...    Click    ${locator}
-        IF    ${clicou}
-            Log    [UAUXT] Item '${nome_item}' clicado com locator: ${locator}    console=True
-            BREAK
-        END
-    END
-    IF    not ${clicou}
-        Print Tree    id:MainView and type:WindowControl    max_depth=16    log_as_warnings=True
-        Fail    Nao foi possivel selecionar item do menu lateral '${nome_item}'.
-    END
-    Pausa Controlada    400ms    Aguardar renderizacao do proximo nivel do menu lateral
-
-Acessar Caminho No Menu Lateral Angular
-    [Documentation]    Navega por um caminho de menu (pai > filho > neto) no menu lateral Angular/CefSharp.
-    [Arguments]    @{itens_menu}
-    ${total_itens}=    Get Length    ${itens_menu}
-    IF    ${total_itens} < 1
-        Fail    Informe ao menos um item para navegar no menu lateral.
-    END
-    ${caminho_log}=    Catenate    SEPARATOR= >     @{itens_menu}
-    Log    [UAUXT] Navegando no menu lateral pelo caminho: ${caminho_log}    console=True
-    FOR    ${item}    IN    @{itens_menu}
-        Selecionar Item Menu Lateral Angular Por Nome    ${item}
-    END
-    Log    [UAUXT] Caminho de menu lateral concluido: ${caminho_log}    console=True
-
-Acessar Tela Contas A Pagar Via Menu Lateral
-    [Documentation]    Acessa a tela Contas a Pagar via icone do menu lateral (Financeiro).
-    [Arguments]    ${indice_menu_financeiro}=${UAUXT_MENU_FINANCEIRO_INDICE}
-    Log    [UAUXT] Acessando tela Contas a Pagar via menu lateral...    console=True
-    Selecionar Icone Menu Lateral Por Indice    ${indice_menu_financeiro}
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}
-    Log    [UAUXT] Fluxo de acesso a Contas a Pagar concluido.    console=True
-
-Clicar Icone Capacete Obras
-    [Documentation]    Clica no icone do capacete de obras (Financeiro) no menu lateral Angular/CefSharp.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Clicando no icone ${UAUXT_MENU_FINANCEIRO_INDICE} do menu lateral (menu principal/Financeiro)...    console=True
-    Selecionar Icone Menu Lateral Por Indice    ${UAUXT_MENU_FINANCEIRO_INDICE}
-    Pausa Controlada    700ms    Aguardando abertura do menu do capacete de obras (Financeiro)
-    Log    [UAUXT] Icone do capacete de obras clicado com sucesso.    console=True
-
-Clicar Icone Maleta Financeiro
-    [Documentation]    Alias legado para manter compatibilidade. Use Clicar Icone Capacete Obras.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
-    Clicar Icone Capacete Obras    ${timeout}
+Obter Icones Da Coluna Lateral
+    [Documentation]    Retorna os icones da coluna lateral a partir do browser do menu.
+    ${browser}=    Get Element    ${UAUXT_MENU_LATERAL_BROWSER}
+    @{textos}=    Get Elements    ${UAUXT_MENU_LATERAL_BROWSER} > type:TextControl    search_depth=20    siblings_only=${False}
+    @{botoes}=    Get Elements    ${UAUXT_MENU_LATERAL_BROWSER} > type:ButtonControl    search_depth=20    siblings_only=${False}
+    @{elementos}=    Combine Lists    ${textos}    ${botoes}
+    ${browser_left}=    Evaluate    $browser.left
+    ${browser_top}=    Evaluate    $browser.top
+    ${browser_bottom}=    Evaluate    $browser.bottom
+    ${expr_icones}=    Catenate    SEPARATOR=${EMPTY}
+    ...    sorted([e for e in $elementos if e.xcenter >= ${browser_left} and e.xcenter <= (${browser_left} + 90) and e.ycenter >= (${browser_top} + 80) and e.ycenter <= ${browser_bottom}], key=lambda x: (x.top, x.left))
+    ${icones_coluna}=    Evaluate    ${expr_icones}
+    RETURN    ${icones_coluna}
 
 Obter Icone Menu Lateral Por Ordem Vertical
     [Documentation]    Retorna o icone da coluna lateral por ordem vertical (1..N).
     [Arguments]    ${ordem}
     ${icones_coluna}=    Obter Icones Da Coluna Lateral
     ${total}=    Get Length    ${icones_coluna}
-    Log    [UAUXT] Candidatos de icone na coluna lateral: ${total}    console=True
     IF    ${total} < ${ordem}
         Fail    Nao ha icones suficientes na coluna lateral. Total=${total}, ordem solicitada=${ordem}.
     END
@@ -294,157 +174,83 @@ Obter Icone Menu Lateral Por Ordem Vertical
     ${icone}=    Get From List    ${icones_coluna}    ${indice}
     RETURN    ${icone}
 
-Obter Icones Da Coluna Lateral
-    [Documentation]    Retorna icones da coluna lateral usando a mesma estrategia do teste de captura.
-    ${documento}=    Get Element    ${UAUXT_MENU_LATERAL_DOCUMENTO}
-    @{textos}=    Get Elements    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:TextControl    search_depth=20    siblings_only=${False}
-    ${doc_left}=    Evaluate    $documento.left
-    ${doc_top}=    Evaluate    $documento.top
-    ${doc_bottom}=    Evaluate    $documento.bottom
-    ${expr_icones}=    Catenate    SEPARATOR=${EMPTY}
-    ...    sorted([e for e in $textos if e.xcenter >= ${doc_left} and e.xcenter <= (${doc_left} + 90) and e.ycenter >= (${doc_top} + 80) and e.ycenter <= ${doc_bottom}], key=lambda x: (x.top, x.left))
-    ${icones_coluna}=    Evaluate    ${expr_icones}
-    RETURN    ${icones_coluna}
+Acessar Menu Lateral Por Indice
+    [Documentation]    Foca o menu lateral e seleciona um icone pelo indice.
+    [Arguments]    ${indice}=${UAUXT_MENU_FINANCEIRO_INDICE}
+    Focar No Menu Lateral Angular UauXT
+    ${icone}=    Obter Icone Menu Lateral Por Ordem Vertical    ${indice}
+    Click    ${icone}
+    Pausa Controlada    80ms    Aguardando abertura do submenu
+    Log    [UAUXT] Menu lateral acessado no indice ${indice}.    console=True
 
-Acessar Aprovacao Pagamentos Via Icone Capacete Obras
-    [Documentation]    Estrategia unica: clica no icone capacete de obras e acessa subniveis por clique.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Clicar Icone Capacete Obras    ${timeout}
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}    ${timeout}
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}    ${timeout}
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}    ${timeout}
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_APROVACAO_PAGAMENTOS_TEXTO}    ${timeout}
-    Log    [UAUXT] Navegacao por capacete de obras ate aprovacao concluida.    console=True
+Selecionar Icone Menu Lateral Por Indice
+    [Documentation]    Mantem compatibilidade com o fluxo anterior.
+    [Arguments]    ${indice}=${UAUXT_MENU_FINANCEIRO_INDICE}
+    Acessar Menu Lateral Por Indice    ${indice}
 
-Acessar Aprovacao Pagamentos Via Icone Maleta
-    [Documentation]    Alias legado para manter compatibilidade. Use Acessar Aprovacao Pagamentos Via Icone Capacete Obras.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
-    Acessar Aprovacao Pagamentos Via Icone Capacete Obras    ${timeout}
-
-Acessar Contas A Pagar Via Icone Capacete Obras
-    [Documentation]    Estrategia unica: capacete de obras > Financeiro > Gestao financeira > Contas a Pagar.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Clicar Icone Capacete Obras    ${timeout}
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}    ${timeout}
-    Pausa Controlada    100ms    Aguardando expansao do submenu Financeiro
-    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}    ${timeout}
-    Pausa Controlada    100ms    Aguardando expansao do submenu Gestao Financeira
-    ${acessou_contas_a_pagar}=    Run Keyword And Return Status
-    ...    Selecionar Submenu Aberto Por Nome    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}    ${timeout}
-    IF    not ${acessou_contas_a_pagar}
-        Log    [UAUXT] Fallback por path para Contas a Pagar.    console=True
-        Wait Until Keyword Succeeds    ${timeout}    500ms
-        ...    Click    ${UAUXT_MENU_ITEM_CONTAS_A_PAGAR_LOCATOR}
+Selecionar Submenu Por Texto Visual
+    [Documentation]    Busca no container do menu lateral um elemento visual com o texto do submenu e tenta clicar nele.
+    [Arguments]    ${nome_submenu}    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    @{tipos}=    Create List    TextControl    ButtonControl    MenuItemControl    TreeItemControl    ListItemControl
+    FOR    ${tipo}    IN    @{tipos}
+        @{elementos}=    Get Elements    ${UAUXT_MENU_LATERAL_BROWSER} > type:${tipo}    search_depth=30    siblings_only=${False}
+        FOR    ${elemento}    IN    @{elementos}
+            ${nome_elem}=    Evaluate    str(getattr($elemento, 'name', '')).strip()
+            ${subname_elem}=    Evaluate    str(getattr($elemento, 'subname', '')).strip()
+            ${texto_elem}=    Evaluate    str(getattr($elemento, 'text', '')).strip()
+            ${texto_total}=    Catenate    SEPARATOR=${SPACE}    ${nome_elem}    ${subname_elem}    ${texto_elem}
+            ${matches}=    Evaluate    '${nome_submenu}'.casefold() in '${texto_total}'.casefold()
+            IF    ${matches}
+                ${clicou}=    Run Keyword And Return Status
+                ...    Wait Until Keyword Succeeds    ${timeout}    300ms
+                ...    Click    ${elemento}
+                IF    ${clicou}
+                    RETURN    ${True}
+                END
+            END
+        END
     END
-    Log    [UAUXT] Navegacao por capacete de obras ate Contas a Pagar concluida.    console=True
+    RETURN    ${False}
 
-Acessar Contas A Pagar Via Icone Maleta
-    [Documentation]    Alias legado para manter compatibilidade. Use Acessar Contas A Pagar Via Icone Capacete Obras.
+Selecionar Submenu Aberto Por Nome
+    [Documentation]    Seleciona submenu visivel por texto no menu lateral do WebView2.
+    [Arguments]    ${nome_submenu}    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Log    [UAUXT] Navegando para: ${nome_submenu}    console=True
+    ${clicou}=    Run Keyword And Return Status
+    ...    Selecionar Submenu Por Texto Visual    ${nome_submenu}    ${timeout}
+    IF    not ${clicou}
+        Fail    Nao foi possivel selecionar submenu '${nome_submenu}' pelo metodo de texto visual.
+    END
+    Log    [UAUXT] Item '${nome_submenu}' selecionado.    console=True
+
+Clicar Icone Capacete Obras
+    [Documentation]    Clica no icone do capacete de obras (Financeiro) no menu lateral.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] [LEGADO] Keyword de maleta redirecionada para capacete de obras.    console=True
-    Acessar Contas A Pagar Via Icone Capacete Obras    ${timeout}
+    Acessar Menu Lateral Por Indice    ${UAUXT_MENU_FINANCEIRO_INDICE}
+    Pausa Controlada    80ms    Aguardando abertura do menu
+    Log    [UAUXT] Icone clicado.    console=True
+
+_Acessar Item Via Icone Capacete Obras Interno
+    [Documentation]    Executa o caminho padrao via capacete com 3 niveis de submenu.
+    [Arguments]    ${submenu_nivel_1}    ${submenu_nivel_2}    ${submenu_nivel_3}
+    ...    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    Clicar Icone Capacete Obras    ${timeout}
+    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_1}    ${timeout}
+    Pausa Controlada    80ms    Aguardando expansao do submenu ${submenu_nivel_1}
+    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_2}    ${timeout}
+    Pausa Controlada    80ms    Aguardando expansao do submenu ${submenu_nivel_2}
+    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_3}    ${timeout}
 
 Acessar Item Via Icone Capacete Obras
     [Documentation]    Padrao de acesso: capacete de obras > nivel 1 > nivel 2 > nivel 3.
     [Arguments]    ${submenu_nivel_1}    ${submenu_nivel_2}    ${submenu_nivel_3}
     ...    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Clicar Icone Capacete Obras    ${timeout}
-    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_1}    ${timeout}
-    Pausa Controlada    100ms    Aguardando expansao do submenu ${submenu_nivel_1}
-    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_2}    ${timeout}
-    Pausa Controlada    100ms    Aguardando expansao do submenu ${submenu_nivel_2}
-    Selecionar Submenu Aberto Por Nome    ${submenu_nivel_3}    ${timeout}
-
-Acessar Emissao De Pagamentos Via Icone Capacete Obras
-    [Documentation]    Estrategia padrao: capacete de obras > Financeiro > Gestao financeira > Emissao de pagamentos.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Acessar Item Via Icone Capacete Obras
-    ...    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}
-    ...    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}
-    ...    ${UAUXT_SUBMENU_EMISSAO_PAGAMENTOS_TEXTO}
+    _Acessar Item Via Icone Capacete Obras Interno
+    ...    ${submenu_nivel_1}
+    ...    ${submenu_nivel_2}
+    ...    ${submenu_nivel_3}
     ...    ${timeout}
-    Log    [UAUXT] Navegacao por capacete de obras ate Emissao de pagamentos concluida.    console=True
-
-Acessar Resumo De Venda Via Menu Lateral
-    [Documentation]    Estrategia padrao: Vendas > Gestao de Vendas > Resumo de venda com fallback.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Acessar Item Via Icone Capacete Obras
-    ...    ${UAUXT_SUBMENU_VENDAS_TEXTO}
-    ...    ${UAUXT_SUBMENU_GESTAO_VENDAS_TEXTO}
-    ...    ${UAUXT_SUBMENU_RESUMO_VENDA_TEXTO}
-    ...    ${timeout}
-    Log    [UAUXT] Navegacao ate Resumo de venda concluida.    console=True
-
-Capturar E Imprimir WebBrowser Menu Lateral
-    [Documentation]    Captura e imprime a arvore do MenuXt/wbBrowser e lista icones TextControl para mapear glyph/posicao.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Capturando arvore do webbrowser lateral...    console=True
-    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Control Window    id:MainView and type:WindowControl
-    Print Tree    ${UAUXT_MENU_LATERAL_HOST}    max_depth=14    log_as_warnings=True
-    Print Tree    ${UAUXT_MENU_LATERAL_BROWSER}    max_depth=14    log_as_warnings=True
-    Print Tree    ${UAUXT_MENU_LATERAL_DOCUMENTO}    max_depth=14    log_as_warnings=True
-    ${documento}=    Get Element    ${UAUXT_MENU_LATERAL_DOCUMENTO}
-    ${doc_left}=    Evaluate    $documento.left
-    ${doc_right}=    Evaluate    $documento.right
-    ${doc_top}=    Evaluate    $documento.top
-    ${doc_bottom}=    Evaluate    $documento.bottom
-    Log    [UAUXT] Bounds documento lateral: L=${doc_left} T=${doc_top} R=${doc_right} B=${doc_bottom}    console=True
-    @{textos}=    Get Elements    ${UAUXT_MENU_LATERAL_DOCUMENTO} > type:TextControl    search_depth=20    siblings_only=${False}
-    ${expr_icones}=    Catenate    SEPARATOR=${EMPTY}
-    ...    sorted([e for e in $textos if e.xcenter >= ${doc_left} and e.xcenter <= (${doc_left} + 90) and e.ycenter >= (${doc_top} + 80) and e.ycenter <= ${doc_bottom}], key=lambda x: (x.top, x.left))
-    ${icones_coluna}=    Evaluate    ${expr_icones}
-    ${total}=    Get Length    ${icones_coluna}
-    Log    [UAUXT] Total de icones candidatos na coluna lateral: ${total}    console=True
-    FOR    ${idx}    IN RANGE    ${total}
-        ${el}=    Get From List    ${icones_coluna}    ${idx}
-        ${nome}=    Evaluate    getattr($el, 'name', '')
-        ${left}=    Evaluate    $el.left
-        ${top}=    Evaluate    $el.top
-        ${right}=    Evaluate    $el.right
-        ${bottom}=    Evaluate    $el.bottom
-        Log    [UAUXT] [ICONE ${idx}] glyph='${nome}' rect=(${left},${top},${right},${bottom})    console=True
-    END
-    Log    [UAUXT] Glyph configurado para capacete: '${UAUXT_MENU_ICONE_CAPACETE_GLYPH}' locator='${UAUXT_MENU_ICONE_CAPACETE_LOCATOR}'    console=True
-
-Navegar Para Menu
-    [Documentation]    Navega para um menu específico no UauXT.
-    [Arguments]    ${menu_locator}    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Navegando para menu: ${menu_locator}    console=True
-    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Click    ${menu_locator} and type:MenuItemControl
-    Log    [UAUXT] Menu acessado com sucesso.    console=True
-
-Navegar Para Submenu
-    [Documentation]    Navega para um submenu específico.
-    [Arguments]    ${submenu_locator}    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    Log    [UAUXT] Navegando para submenu: ${submenu_locator}    console=True
-    Wait Until Keyword Succeeds    ${timeout}    1s
-    ...    Click    ${submenu_locator} and type:MenuItemControl
-    Log    [UAUXT] Submenu acessado com sucesso.    console=True
-
-Aguardar Tela Carregar
-    [Documentation]    Aguarda uma tela específica carregar.
-    [Arguments]    ${tela_locator}    ${timeout}=${UAUXT_TIMEOUT_TELA}
-    Log    [UAUXT] Aguardando tela carregar: ${tela_locator}    console=True
-    Wait Until Keyword Succeeds    ${timeout}    2s
-    ...    Control Window    ${tela_locator} and type:WindowControl
-    Log    [UAUXT] Tela carregada com sucesso.    console=True
-
-Acessar Tela Aprovacao Pagamentos
-    [Documentation]    Navega até a tela de aprovação de pagamentos.
-    Log    [UAUXT] Iniciando navegação para tela de aprovação de pagamentos...    console=True
-    ${acessou_menu_lateral}=    Run Keyword And Return Status
-    ...    Acessar Caminho No Menu Lateral Angular    @{UAUXT_CAMINHO_MENU_APROVACAO_PAGAMENTOS}
-    IF    not ${acessou_menu_lateral}
-        Log    [UAUXT] Fallback: navegando pelo menu classico (nao lateral).    console=True
-        Navegar Para Menu    ${UAUXT_MENU_FINANCEIRO}
-        Navegar Para Submenu    ${UAUXT_SUBMENU_CONTAS_PAGAR}
-        Navegar Para Submenu    ${UAUXT_SUBMENU_APROVACAO}
-    END
-    Aguardar Tela Carregar    ${UAUXT_TELA_APROVACAO_PAGAMENTOS}
-    Log    [UAUXT] Tela de aprovação de pagamentos acessada.    console=True
+    Log    [UAUXT] Caminho '${submenu_nivel_1} > ${submenu_nivel_2} > ${submenu_nivel_3}' acessado com sucesso.    console=True
 
 # === GRID E FILTROS ===
 

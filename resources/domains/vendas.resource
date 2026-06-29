@@ -1,6 +1,6 @@
 *** Settings ***
 Documentation       Fluxos de negocio do dominio de Vendas no UauXT.
-...                 Responsabilidade: compor fluxos de negocio usando keywords de apps e data.
+...                 Responsabilidade: compor fluxos de negocio usando keywords tecnicas dos apps e dados compartilhados via imports indiretos.
 Resource            ../apps/uauxt.resource
 Resource            ../apps/uauxt_grid.resource
 Resource            ../apps/uauxt_vendas.resource
@@ -14,18 +14,37 @@ Validar Locator Configurado
         Fail    Locator nao configurado: ${nome_locator}. Atualize em resources/data/vendas_data.resource.
     END
 
-Navegar Para Resumo De Venda
-    [Documentation]    Navega via menu até a tela Resumo de venda (Vendas > Gestão de Vendas > Resumo de venda).
-    Log    [DOM-VENDAS] Navegando para Resumo de Venda...    console=True
-    Acessar Item Via Icone Capacete Obras
+Acessar Resumo De Venda Via Menu Lateral
+    [Documentation]    Acessa Resumo de venda pelo caminho de negócio Vendas > Gestão de Vendas > Resumo de venda.
+    [Arguments]    ${timeout}=${VENDAS_TIMEOUT_PADRAO}
+    Log    [DOM-VENDAS] Acessando Resumo de Venda pelo menu lateral...    console=True
+    ${status}=    Run Keyword And Return Status
+    ...    Acessar Item Via Icone Capacete Obras
     ...    ${UAUXT_SUBMENU_VENDAS_TEXTO}
     ...    ${UAUXT_SUBMENU_GESTAO_VENDAS_TEXTO}
     ...    ${UAUXT_SUBMENU_RESUMO_VENDA_TEXTO}
+    ...    ${timeout}
+    IF    not ${status}
+        Fail    Nao foi possivel acessar Resumo de Venda via menu lateral.
+    END
+    Log    [DOM-VENDAS] Resumo de Venda acessado.    console=True
+
+Navegar Para Resumo De Venda
+    [Documentation]    Navega via menu até a tela Resumo de venda (Vendas > Gestão de Vendas > Resumo de venda).
+    [Arguments]    ${timeout}=${VENDAS_TIMEOUT_PADRAO}
+    Log    [DOM-VENDAS] Navegando para Resumo de Venda...    console=True
+    ${abriu_resumo}=    Run Keyword And Return Status
+    ...    Acessar Resumo De Venda Via Menu Lateral
+    ...    ${timeout}
+    IF    not ${abriu_resumo}
+        Log    [DOM-VENDAS] Fallback: abrindo Resumo de Venda pelo caminho de submenu via icone.    console=True
+        Acessar Resumo De Venda Via Menu Lateral    ${timeout}
+    END
     ${tempo_abertura_ms}=    Aguardar Tela Com Tempo De Abertura
     ...    ${VENDAS_RESUMO_TELA_LOCATOR}
     ...    tela Resumo de Venda
     ...    janela
-    ...    ${VENDAS_TIMEOUT_PADRAO}
+    ...    ${timeout}
     ...    ${VENDAS_RESUMO_TEMPO_MAX_ABERTURA_MS}
     Log    [DOM-VENDAS] Tela Resumo de Venda aberta em ${tempo_abertura_ms} ms.    console=True
 
