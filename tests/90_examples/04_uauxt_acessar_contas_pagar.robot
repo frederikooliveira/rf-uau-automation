@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation       Exemplo de navegação e acesso à tela de aprovação de pagamentos.
 Resource            ../../resources/domains/financeiro.resource
-Test Tags           examples    uauxt    navegacao
+Test Tags           examples    uauxt    navegacao    navegar-contas-pagar
 
 *** Test Cases ***
 Acessar Contas A Pagar

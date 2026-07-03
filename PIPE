@@ -1,1 +1,1 @@
-{"ok": false, "message": "Nenhum grid encontrado pelos tokens de classe.", "tokens": ["TG80", "C1Grid", "GridOleDB", "grid"], "target_text": "Resumo de venda", "window": "GDI+ Window (UauXT.exe)"}
+{"ok": true, "action": "click-toolbar-button", "button_index": 4, "button_count": 17, "toolbar_handle": 460236, "button_rect_client": [262, 0, 320, 46], "click_screen": [359, 119]}

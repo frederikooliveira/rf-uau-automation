@@ -242,14 +242,19 @@ _Acessar Item Via Icone Capacete Obras Interno
     Selecionar Submenu Aberto Por Nome    ${submenu_nivel_3}    ${timeout}
 
 Acessar Item Via Icone Capacete Obras
-    [Documentation]    Padrao de acesso: capacete de obras > nivel 1 > nivel 2 > nivel 3.
+    [Documentation]    Padrao de acesso: capacete de obras > nivel 1 > nivel 2 > nivel 3, com retry controlado.
     [Arguments]    ${submenu_nivel_1}    ${submenu_nivel_2}    ${submenu_nivel_3}
     ...    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    _Acessar Item Via Icone Capacete Obras Interno
+    ${status}=    Run Keyword And Return Status
+    ...    Wait Until Keyword Succeeds    ${timeout}    500ms
+    ...    _Acessar Item Via Icone Capacete Obras Interno
     ...    ${submenu_nivel_1}
     ...    ${submenu_nivel_2}
     ...    ${submenu_nivel_3}
     ...    ${timeout}
+    IF    not ${status}
+        Fail    Nao foi possivel acessar item '${submenu_nivel_1} > ${submenu_nivel_2} > ${submenu_nivel_3}' via menu lateral.
+    END
     Log    [UAUXT] Caminho '${submenu_nivel_1} > ${submenu_nivel_2} > ${submenu_nivel_3}' acessado com sucesso.    console=True
 
 # === GRID E FILTROS ===

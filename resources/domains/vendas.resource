@@ -33,13 +33,7 @@ Navegar Para Resumo De Venda
     [Documentation]    Navega via menu até a tela Resumo de venda (Vendas > Gestão de Vendas > Resumo de venda).
     [Arguments]    ${timeout}=${VENDAS_TIMEOUT_PADRAO}
     Log    [DOM-VENDAS] Navegando para Resumo de Venda...    console=True
-    ${abriu_resumo}=    Run Keyword And Return Status
-    ...    Acessar Resumo De Venda Via Menu Lateral
-    ...    ${timeout}
-    IF    not ${abriu_resumo}
-        Log    [DOM-VENDAS] Fallback: abrindo Resumo de Venda pelo caminho de submenu via icone.    console=True
-        Acessar Resumo De Venda Via Menu Lateral    ${timeout}
-    END
+    Acessar Resumo De Venda Via Menu Lateral    ${timeout}
     ${tempo_abertura_ms}=    Aguardar Tela Com Tempo De Abertura
     ...    ${VENDAS_RESUMO_TELA_LOCATOR}
     ...    tela Resumo de Venda

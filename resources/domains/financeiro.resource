@@ -18,17 +18,20 @@ Validar Locator Configurado
 
 Acessar Contas A Pagar Via Icone Capacete Obras
     [Documentation]    Acessa Contas a Pagar pelo caminho capacete > Financeiro > Gestao financeira > Contas a Pagar.
-    [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
-    ${status}=    Run Keyword And Return Status
-    ...    Acessar Item Via Icone Capacete Obras
+    [Arguments]    ${timeout}=${FIN_EMI_TIMEOUT_PADRAO}
+    Log    [DOM-FIN] Acessando Contas a Pagar pelo menu lateral...    console=True
+    Acessar Item Via Icone Capacete Obras
     ...    ${UAUXT_SUBMENU_FINANCEIRO_TEXTO}
     ...    ${UAUXT_SUBMENU_GESTAO_FINANCEIRA_TEXTO}
     ...    ${UAUXT_SUBMENU_CONTAS_A_PAGAR_TEXTO}
     ...    ${timeout}
-    IF    not ${status}
-        Fail    Nao foi possivel acessar Contas a Pagar via menu lateral.
-    END
-    Log    [DOM-FIN] Navegacao por capacete de obras ate Contas a Pagar concluida.    console=True
+    ${tempo_abertura_ms}=    Aguardar Tela Com Tempo De Abertura
+    ...    ${FIN_EMI_WINDOW_LOCATOR}
+    ...    tela Contas a Pagar
+    ...    janela
+    ...    ${timeout}
+    ...    ${FIN_EMI_TEMPO_MAX_ABERTURA_MS}
+    Log    [DOM-FIN] Tela Contas a Pagar aberta em ${tempo_abertura_ms} ms.    console=True
 
 Navegar Para Emissao De Pagamentos
     [Documentation]    Navega pelo menu lateral ate a tela de Emissao de pagamentos.

@@ -18,7 +18,7 @@ Preencher Confirmado No Grid De Processos De Pagamento
     Log    [EXEMPLO] Iniciando preenchimento do Confirmado no grid de Processos de pagamento...    console=True
     Abrir E Logar No UauXT
     Pausa Controlada    10s    Aguardando carregamento completo apos login
-    Acessar Contas A Pagar Via Icone Capacete Obras
+    financeiro.Acessar Contas A Pagar Via Icone Capacete Obras
     Selecionar Empresa E Obra
     Selecionar Empresa No Popup    ${EMPRESA_PADRAO}
     Pausa Controlada    1s    Aguardando processamento do filtro de empresa
