@@ -1,78 +1,58 @@
 ---
-description: "Gera estrutura base de uma nova tela (data/apps/domain/teste) a partir de um JSON de mapeamento, com placeholders TODO_CONFIGURAR_ e baixo custo de manutencao."
-name: "Scaffold Tela UauXT"
+description: "Gera apenas a ação de navegação para abrir uma tela UauXT a partir do JSON de mapeamento, usando os campos relevantes do JSON e sem criar scaffolding completo."
+name: "Scaffold Navegação Tela UauXT"
 argument-hint: "Cole o JSON do mapeamento da tela"
 agent: "agent"
 ---
 
-Crie os artefatos da tela a partir do JSON de mapeamento fornecido pelo usuario.
+Crie ou atualize apenas a ação de navegação que abre a tela descrita no JSON.
 
 ## Entrada esperada
 
 - JSON produzido por "Mapear Tela UauXT (Baixo Custo)"
 
-Se faltar algo essencial, perguntar apenas o minimo:
-1. nome de app (arquivo em resources/apps)
-2. nome de dominio (arquivo em resources/domains)
-3. pasta de teste (default: tests/flows/<contexto>)
-4. confirmar se e teste de exemplo (se sim, usar tests/90_examples)
+Use os campos abaixo para tomar a decisão:
+- `nome_tela`, `caminho_acesso` e `acao_navegacao` para definir a keyword e os passos
+- `locators_confirmados` para preencher locators já conhecidos
+- `locators_pendentes` para manter placeholders `TODO_CONFIGURAR_`
+- `resumo.toolbars`, `resumo.grids` e demais campos apenas como contexto técnico; não gerar scaffolding completo com base neles
 
-## Regras obrigatorias
+Se faltar algo essencial, perguntar apenas o mínimo:
+1. nome de app ou recurso alvo (se não houver um recurso existente adequado)
+2. nome de domínio, se for necessário para organizar a keyword
+
+## Regras obrigatórias
 
 - Respeitar arquitetura em camadas: core -> apps -> domains
-- Nao colocar regra de negocio em apps
-- Nao criar locator hardcoded em teste
-- Locators nao confirmados devem ficar como TODO_CONFIGURAR_<NOME>
-- Nao usar automacao por imagem
-- Evitar mudancas grandes; gerar somente o necessario
-- Padrao de criacao de testes: tests/flows/<contexto>
-- `tests/90_examples` somente se o usuario pedir explicitamente teste de exemplo/diagnostico
-- Nao duplicar chamadas de probe com `Run Process` em recursos de contexto quando ja houver keyword compartilhada
-- Reutilizar `resources/apps/uauxt_grid.resource` para operacoes Win32 de grid/toolbar
+- Não criar arquivos de data/apps/domain/teste completos, salvo solicitação explícita
+- Criar apenas o necessário para a navegação: preferencialmente uma keyword em um recurso existente, por exemplo em resources/apps/uauxt.resource ou em resources/domains/<dominio>.resource
+- Se houver locators novos e ainda não existirem, registrar em resources/data/<contexto>_data.resource como `TODO_CONFIGURAR_`
+- Não colocar regra de negócio em apps
+- Não usar automação por imagem
+- Reutilizar keywords já existentes para menu, toolbar e grid
+- Se o JSON indicar `acao_navegacao.tipo = menu`, usar a keyword compartilhada de navegação do app
+- Se o JSON indicar `toolbar`, usar a keyword compartilhada de toolbar
+- Não criar testes automaticamente nesta etapa
+- Não inventar dados; use placeholders para o que não estiver confirmado
 
-## Arquivos para gerar (quando nao existirem)
+## Artefatos a gerar
 
-1. resources/data/<contexto>_data.resource
-2. resources/apps/<app>.resource
-3. resources/domains/<dominio>.resource
-4. tests/flows/<contexto>/NN_<nome_descritivo>.robot
+- Preferencialmente: atualizar um recurso existente com a keyword de navegação
+- Opcionalmente: criar ou atualizar resources/data/<contexto>_data.resource se houver locators novos
+- Não criar: testes, arquivos de app/domain/data completos, ou qualquer outra estrutura extra
 
-Quando explicitamente solicitado como exemplo:
-- tests/90_examples/NN_<nome_descritivo>.robot
+## Como usar o JSON
 
-Opcional (somente se realmente necessario):
-- resources/core/<helper>.resource (apenas helper tecnico reutilizavel)
+1. Identifique `acao_navegacao.nome_keyword`
+2. Use `acao_navegacao.tipo` e `acao_navegacao.passos` para montar a implementação
+3. Use `nome_tela` e `caminho_acesso` para nomear o contexto da keyword e os logs
+4. Use `locators_confirmados` para preencher valores reais
+5. Use `locators_pendentes` para manter placeholders e não inventar
+6. Ignore o restante do JSON, exceto como contexto técnico
 
-## Regras de conteudo por camada
-
-### data
-- Apenas *** Variables ***
-- Locators, indices, constantes, dados
-- TODO_CONFIGURAR_ para itens pendentes
-
-### apps
-- Keywords tecnicas de UI
-- Logs com prefixo de app
-- Importa core + data
-- Nao encapsular novamente comandos de probe ja expostos por `uauxt_grid.resource`
-
-### domains
-- Fluxo de negocio
-- Usa apenas apps + data
-- Incluir "Validar Locator Configurado"
-- Quando houver acao de toolbar/grid Win32, usar keyword compartilhada de `uauxt_grid.resource`
-- Para acesso de tela via menu, usar keyword dedicada em `resources/apps/uauxt.resource`
-- Padrao de navegacao: encapsular no app (ex.: `Acessar <Tela> Via ...`) com fallback robusto
-- Evitar cliques encadeados de menu diretamente no domain
-
-### teste
-- Usa domain quando existir
-- Em flows: tags de fluxo/contexto (sem `examples` por padrao)
-- Em examples: incluir tag `examples`
-- Logs com prefixo de contexto
-
-## Saida da execucao
+## Saída da execução
 
 1. Lista dos arquivos criados/alterados
-2. Resumo curto do que ficou pendente (TODO_CONFIGURAR_)
-3. Comando sugerido para execucao por tag
+2. Resumo da keyword de navegação gerada
+3. Lista de placeholders pendentes
+4. Observação se a implementação ficou restrita à navegação

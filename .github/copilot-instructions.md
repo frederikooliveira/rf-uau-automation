@@ -19,6 +19,7 @@ Escopo: orientacoes objetivas para a IA gerar codigo consistente neste repositor
 Dependencias entre camadas:
 - Permitido: core -> (nenhuma), apps -> core+data, domains -> apps+data
 - Proibido: core depender de apps/domains; apps conter regra de negocio
+- Testes devem permanecer de alto nivel e declarativos; nao devem conter chamadas diretas a keywords de app/core nem implementacao de fluxo. A navegacao, validacao e regra de negocio devem ficar encapsuladas em keywords de dominio em resources/domains.
 
 ## Convencoes de nomenclatura
 
@@ -34,6 +35,9 @@ Dependencias entre camadas:
 - Criar primeiro em resources/data/<contexto>_data.resource
 - Enquanto nao mapeado, usar TODO_CONFIGURAR_<NOME>
 - Validar locator configurado antes de interagir na UI
+- Organizar variáveis por tela/fluxo em blocos claros no arquivo de dados, por exemplo: `# --- Tela: Usuários ---` e `# --- Tela: Grupo de Usuários ---`
+- Preferir nomes de variáveis que identifiquem a tela e o elemento, como `${SEGURANCA_USUARIOS_TELA_LOCATOR}` e `${SEGURANCA_GRUPO_USUARIOS_BTN_INSERIR_LOCATOR}`
+- Manter o mapeamento de cada tela concentrado em seu próprio bloco, evitando misturar locators de telas diferentes no mesmo arquivo sem separação
 
 ## Execucao e validacao
 

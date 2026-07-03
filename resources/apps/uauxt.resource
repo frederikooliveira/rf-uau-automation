@@ -189,8 +189,9 @@ Selecionar Icone Menu Lateral Por Indice
     Acessar Menu Lateral Por Indice    ${indice}
 
 Selecionar Submenu Por Texto Visual
-    [Documentation]    Busca no container do menu lateral um elemento visual com o texto do submenu e tenta clicar nele.
+    [Documentation]    Busca no container do menu lateral um elemento visual cujo texto corresponda exatamente ao submenu desejado.
     [Arguments]    ${nome_submenu}    ${timeout}=${UAUXT_TIMEOUT_MENU}
+    ${nome_submenu_normalizado}=    Evaluate    str('${nome_submenu}').strip().casefold()
     @{tipos}=    Create List    TextControl    ButtonControl    MenuItemControl    TreeItemControl    ListItemControl
     FOR    ${tipo}    IN    @{tipos}
         @{elementos}=    Get Elements    ${UAUXT_MENU_LATERAL_BROWSER} > type:${tipo}    search_depth=30    siblings_only=${False}
@@ -199,7 +200,8 @@ Selecionar Submenu Por Texto Visual
             ${subname_elem}=    Evaluate    str(getattr($elemento, 'subname', '')).strip()
             ${texto_elem}=    Evaluate    str(getattr($elemento, 'text', '')).strip()
             ${texto_total}=    Catenate    SEPARATOR=${SPACE}    ${nome_elem}    ${subname_elem}    ${texto_elem}
-            ${matches}=    Evaluate    '${nome_submenu}'.casefold() in '${texto_total}'.casefold()
+            ${texto_total_normalizado}=    Evaluate    str('${texto_total}').strip().casefold()
+            ${matches}=    Evaluate    $texto_total_normalizado == $nome_submenu_normalizado
             IF    ${matches}
                 ${clicou}=    Run Keyword And Return Status
                 ...    Wait Until Keyword Succeeds    ${timeout}    300ms
@@ -227,7 +229,7 @@ Clicar Icone Capacete Obras
     [Documentation]    Clica no icone do capacete de obras (Financeiro) no menu lateral.
     [Arguments]    ${timeout}=${UAUXT_TIMEOUT_MENU}
     Acessar Menu Lateral Por Indice    ${UAUXT_MENU_FINANCEIRO_INDICE}
-    Pausa Controlada    80ms    Aguardando abertura do menu
+    Pausa Controlada    30ms    Aguardando abertura do menu
     Log    [UAUXT] Icone clicado.    console=True
 
 _Acessar Item Via Icone Capacete Obras Interno
@@ -236,9 +238,9 @@ _Acessar Item Via Icone Capacete Obras Interno
     ...    ${timeout}=${UAUXT_TIMEOUT_MENU}
     Clicar Icone Capacete Obras    ${timeout}
     Selecionar Submenu Aberto Por Nome    ${submenu_nivel_1}    ${timeout}
-    Pausa Controlada    80ms    Aguardando expansao do submenu ${submenu_nivel_1}
+    Pausa Controlada    30ms    Aguardando expansao do submenu ${submenu_nivel_1}
     Selecionar Submenu Aberto Por Nome    ${submenu_nivel_2}    ${timeout}
-    Pausa Controlada    80ms    Aguardando expansao do submenu ${submenu_nivel_2}
+    Pausa Controlada    30ms    Aguardando expansao do submenu ${submenu_nivel_2}
     Selecionar Submenu Aberto Por Nome    ${submenu_nivel_3}    ${timeout}
 
 Acessar Item Via Icone Capacete Obras

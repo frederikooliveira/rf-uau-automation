@@ -1,1 +1,106 @@
-{"ok": true, "action": "click-toolbar-button", "button_index": 4, "button_count": 17, "toolbar_handle": 460236, "button_rect_client": [262, 0, 320, 46], "click_screen": [359, 119]}
+{
+  "ok": true,
+  "action": "list-toolbar-buttons",
+  "toolbar_class": "msvb_lib_toolbar",
+  "toolbars": [
+    {
+      "handle": 3610040,
+      "screen_rect": [
+        68,
+        96,
+        1917,
+        142
+      ],
+      "button_count": 4,
+      "buttons": [
+        {
+          "index": 0,
+          "client_rect": [
+            0,
+            0,
+            64,
+            46
+          ],
+          "screen_center": [
+            100,
+            119
+          ],
+          "width_px": 64,
+          "is_separator": false
+        },
+        {
+          "index": 1,
+          "client_rect": [
+            64,
+            0,
+            128,
+            46
+          ],
+          "screen_center": [
+            164,
+            119
+          ],
+          "width_px": 64,
+          "is_separator": false
+        },
+        {
+          "index": 2,
+          "client_rect": [
+            128,
+            0,
+            192,
+            46
+          ],
+          "screen_center": [
+            228,
+            119
+          ],
+          "width_px": 64,
+          "is_separator": false
+        },
+        {
+          "index": 3,
+          "client_rect": [
+            192,
+            0,
+            256,
+            46
+          ],
+          "screen_center": [
+            292,
+            119
+          ],
+          "width_px": 64,
+          "is_separator": false
+        }
+      ]
+    },
+    {
+      "handle": 726446,
+      "screen_rect": [
+        67,
+        143,
+        134,
+        197
+      ],
+      "button_count": 1,
+      "buttons": [
+        {
+          "index": 0,
+          "client_rect": [
+            0,
+            0,
+            67,
+            54
+          ],
+          "screen_center": [
+            100,
+            170
+          ],
+          "width_px": 67,
+          "is_separator": false
+        }
+      ]
+    }
+  ]
+}

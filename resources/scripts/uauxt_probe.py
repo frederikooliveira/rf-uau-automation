@@ -112,6 +112,47 @@ def _parent_chain(ctrl: Any, max_levels: int = 6) -> str:
     return " > ".join(chain)
 
 
+def _collect_control_identity(ctrl: Any) -> Dict[str, Any]:
+    """Coleta dados básicos de identidade de um controle Win32/UIA para inspeção."""
+    handle = _safe(lambda: int(ctrl.handle), None)
+    cls_name = _safe(lambda: ctrl.class_name(), "")
+    txt = _safe(lambda: ctrl.window_text(), "")
+    visible = bool(_safe(lambda: ctrl.is_visible(), False))
+    enabled = bool(_safe(lambda: ctrl.is_enabled(), False))
+
+    automation_id = None
+    for attr in ("automation_id", "control_id"):
+        value = _safe(lambda: getattr(ctrl, attr), None)
+        if value is None:
+            continue
+        if callable(value):
+            try:
+                value = value()
+            except Exception:
+                value = None
+        if value not in (None, ""):
+            automation_id = value
+            break
+
+    if automation_id is None:
+        # Tenta materializar o valor via UIA/pywinauto quando o controle vier de um wrapper compatível.
+        try:
+            wrapper = getattr(ctrl, "element_info", None)
+            if wrapper is not None:
+                automation_id = _safe(lambda: getattr(wrapper, "automation_id", None), None)
+        except Exception:
+            automation_id = None
+
+    return {
+        "handle": handle,
+        "class_name": cls_name,
+        "text": txt,
+        "automation_id": automation_id,
+        "visible": visible,
+        "enabled": enabled,
+    }
+
+
 def _connect_uauxt_window(title_regex: Optional[str] = None):
     app = pywinauto.Application(backend="win32").connect(path="UauXT.exe")
     windows = _safe(app.windows, [])
@@ -760,10 +801,29 @@ def list_controls(class_filter: str = "", text_filter: str = "") -> Dict[str, An
         is_visible = bool(ctypes.windll.user32.IsWindowVisible(hwnd))
         is_enabled = bool(ctypes.windll.user32.IsWindowEnabled(hwnd))
 
+        automation_id = None
+        try:
+            app_uia = pywinauto.Application(backend="uia").connect(path="UauXT.exe")
+            win_uia = app_uia.top_window()
+            for child in win_uia.descendants():
+                try:
+                    ctrl_handle = int(child.handle)
+                except Exception:
+                    ctrl_handle = None
+                if ctrl_handle != hwnd:
+                    continue
+                automation_id = _safe(lambda: child.automation_id(), None)
+                if automation_id in (None, ""):
+                    automation_id = _safe(lambda: child.control_id(), None)
+                break
+        except Exception:
+            automation_id = None
+
         controls.append({
             "handle": hwnd,
             "class_name": cls,
             "text": txt,
+            "automation_id": automation_id,
             "screen_rect": [rect.left, rect.top, rect.right, rect.bottom],
             "size": [w, h],
             "visible": is_visible,
