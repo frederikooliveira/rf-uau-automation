@@ -1,6 +1,8 @@
 *** Settings ***
 Documentation       Keywords específicas da aplicação UauXT.
 ...                 Responsabilidade: login, navegacao, fluxos genéricos do UauXT.
+Library             OperatingSystem
+Library             Process
 Library             RPA.Windows
 Resource            ../core/ui_helpers.resource
 Resource            ../core/sync.resource
@@ -8,6 +10,58 @@ Resource            ../data/uauxt_data.resource
 Resource            ../data/uauxt_menu_data.resource
 
 *** Keywords ***
+Preencher Campo UauXT Por Locator Via RPA
+    [Documentation]    Preenche um controle do UauXT diretamente via RPA.Windows sem subprocesso.
+    [Arguments]    ${locator}    ${texto}
+    ${strategy}=    Evaluate    str('${locator}').split(':', 1)[0].strip()
+    ${identificador}=    Evaluate    str('${locator}').split(':', 1)[1].strip()
+    ${locator_rpa}=    Set Variable    ${locator}
+    IF    '${strategy}' == 'automation_id' or '${strategy}' == 'control_id'
+        ${locator_rpa}=    Set Variable    id:${identificador}
+    END
+    Click    ${locator_rpa}
+    Set Value    ${locator_rpa}    ${texto}
+
+Preencher Campo UauXT Por Locator
+    [Documentation]    Foca e preenche um controle do UauXT via locator como automation_id:123 ou control_id:123, priorizando o caminho direto do RPA.Windows e usando o probe como fallback.
+    [Arguments]    ${locator}    ${texto}
+    ${strategy}=    Evaluate    str('${locator}').split(':', 1)[0].strip()
+    ${identificador}=    Evaluate    str('${locator}').split(':', 1)[1].strip()
+
+    ${preencheu}=    Run Keyword And Return Status
+    ...    Wait Until Keyword Succeeds    3s    200ms
+    ...    Preencher Campo UauXT Por Locator Via RPA
+    ...    ${locator}
+    ...    ${texto}
+
+    IF    ${preencheu}
+        Log    [UAUXT] Controle ${locator} preenchido com sucesso via RPA.Windows.    console=True
+        RETURN
+    END
+
+    IF    '${strategy}' == 'control_id'
+        ${flag}=    Set Variable    --control-id
+    ELSE
+        ${flag}=    Set Variable    --automation-id
+    END
+    ${python_exe}=    Normalize Path    ${EXECDIR}${/}.venv${/}Scripts${/}python.exe
+    ${script_path}=    Normalize Path    ${EXECDIR}${/}resources${/}scripts${/}uauxt_probe.py
+    ${result}=    Run Process
+    ...    ${python_exe}
+    ...    ${script_path}
+    ...    set-control-text
+    ...    ${flag}
+    ...    ${identificador}
+    ...    --value
+    ...    ${texto}
+    ...    stdout=PIPE
+    ...    stderr=PIPE
+    ...    timeout=${UAUXT_TIMEOUT_PADRAO}
+    IF    ${result.rc} != 0
+        Fail    Falha ao preencher o controle ${locator}: ${result.stderr}
+    END
+    Log    [UAUXT] Controle ${locator} preenchido com sucesso via probe.    console=True
+
 Abrir UauXT
     [Documentation]    Executa o UauXT a partir do caminho padrao da instalacao.
     [Arguments]    ${caminho_exe}=${UAUXT_EXE}

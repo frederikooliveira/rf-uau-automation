@@ -155,7 +155,7 @@ def _collect_control_identity(ctrl: Any) -> Dict[str, Any]:
 
 def _connect_uauxt_window(title_regex: Optional[str] = None):
     app = pywinauto.Application(backend="win32").connect(path="UauXT.exe")
-    windows = _safe(app.windows, [])
+    windows = list(_safe(app.windows, []))
 
     if title_regex:
         pattern = re.compile(title_regex, re.IGNORECASE)
@@ -163,6 +163,19 @@ def _connect_uauxt_window(title_regex: Optional[str] = None):
             title = str(_safe(window.window_text, ""))
             if pattern.search(title):
                 return app, window
+
+    try:
+        fg_handle = int(ctypes.windll.user32.GetForegroundWindow())
+    except Exception:
+        fg_handle = None
+
+    if fg_handle:
+        for window in windows:
+            try:
+                if int(_safe(getattr(window, "handle", None), 0)) == fg_handle:
+                    return app, window
+            except Exception:
+                continue
 
     for window in windows:
         title = str(_safe(window.window_text, ""))
@@ -367,6 +380,85 @@ def _send_key_repeat(key_name: str, count: int, delay_s: float = 0.06) -> None:
     for _ in range(steps):
         keyboard.send_keys("{" + key_name + "}")
         time.sleep(delay_s)
+
+
+def set_control_text_by_id(control_id: Optional[str], automation_id: Optional[str], value: str) -> Dict[str, Any]:
+    target_id = str(control_id or automation_id or "").strip()
+    if not target_id:
+        return {"ok": False, "action": "set-control-text", "message": "Informe automation_id ou control_id."}
+
+    try:
+        app_uia = pywinauto.Application(backend="uia").connect(path="UauXT.exe")
+        root_uia = app_uia.top_window()
+    except Exception as exc:
+        return {
+            "ok": False,
+            "action": "set-control-text",
+            "message": f"Nao foi possivel conectar no UauXT via UIA: {exc}",
+            "target_id": target_id,
+        }
+
+    target_ctrl = None
+    target_cls = ""
+    descendants = list(_safe(lambda: root_uia.descendants(), []))
+    for ctrl in descendants:
+        try:
+            ctrl_class = str(_safe(ctrl.class_name, ""))
+            actual_control_id = _safe(lambda: getattr(ctrl, "control_id", None), None)
+            if callable(actual_control_id):
+                try:
+                    actual_control_id = actual_control_id()
+                except Exception:
+                    actual_control_id = None
+            actual_automation_id = _safe(lambda: getattr(ctrl, "automation_id", None), None)
+            if callable(actual_automation_id):
+                try:
+                    actual_automation_id = actual_automation_id()
+                except Exception:
+                    actual_automation_id = None
+
+            if str(actual_control_id) == target_id or str(actual_automation_id) == target_id:
+                target_ctrl = ctrl
+                target_cls = ctrl_class
+                break
+        except Exception:
+            continue
+
+    if target_ctrl is None:
+        return {
+            "ok": False,
+            "action": "set-control-text",
+            "message": f"Controle com id '{target_id}' nao encontrado.",
+            "target_id": target_id,
+        }
+
+    try:
+        _safe(target_ctrl.set_focus)
+        time.sleep(0.2)
+        _safe(target_ctrl.click_input)
+        time.sleep(0.2)
+        keyboard.send_keys("^a")
+        time.sleep(0.05)
+        keyboard.send_keys("{BACKSPACE}")
+        time.sleep(0.05)
+        keyboard.send_keys(str(value))
+        time.sleep(0.2)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "action": "set-control-text",
+            "message": f"Falha ao preencher controle '{target_id}': {exc}",
+            "target_id": target_id,
+            "class_name": target_cls,
+        }
+
+    return {
+        "ok": True,
+        "action": "set-control-text",
+        "target_id": target_id,
+        "class_name": target_cls,
+        "value": str(value),
+    }
 
 
 def _commit_current_cell_edit() -> None:
@@ -763,78 +855,66 @@ def get_grid_cell_value(
 # Indices mapeados em resources/data/*_data.resource.
 # ════════════════════════════════════════════════════════════════════════════════
 
-def list_controls(class_filter: str = "", text_filter: str = "") -> Dict[str, Any]:
-    """Enumera todos os controles filhos da janela UauXT ativa.
+def list_controls(class_filter: str = "", text_filter: str = "", automation_id_filter: str = "") -> Dict[str, Any]:
+    """Enumera controles da janela UauXT ativa usando UIA, com filtros de ruído reduzido.
 
-    Uso: executar como subcomando 'list-controls' para descobrir classes de controles
-    (toolbars verticais, panels, tabs, etc.) em qualquer tela do UauXT.
-    Retorna lista de controles com handle, class_name, text, rect e screen_rect.
+    Uso: executar como subcomando 'list-controls' para descobrir classes e automation_id
+    de controles relevantes em qualquer tela do UauXT.
+    Retorna lista de controles com handle, class_name, text, automation_id, rect e screen_rect.
     """
-    EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
-
-    _app, main_win = _connect_uauxt_window()
-    root_hwnd = main_win.handle
-
     controls: List[Dict[str, Any]] = []
-    cf_lower = class_filter.lower()
+    cf_terms = [term.strip().lower() for term in class_filter.split(",") if term.strip()]
     tf_lower = text_filter.lower()
+    aid_terms = [term.strip().lower() for term in automation_id_filter.split(",") if term.strip()]
 
-    def _enum_cb(hwnd: int, _lparam: int) -> bool:
-        cls_buf = ctypes.create_unicode_buffer(256)
-        ctypes.windll.user32.GetClassNameW(hwnd, cls_buf, 256)
-        cls = cls_buf.value
+    try:
+        app_uia = pywinauto.Application(backend="uia").connect(path="UauXT.exe")
+        win_uia = app_uia.top_window()
+        descendants = list(_safe(lambda: win_uia.descendants(), []))
+    except Exception:
+        descendants = []
 
-        txt_buf = ctypes.create_unicode_buffer(512)
-        ctypes.windll.user32.GetWindowTextW(hwnd, txt_buf, 512)
-        txt = txt_buf.value.strip()
-
-        if cf_lower and cf_lower not in cls.lower():
-            return True
-        if tf_lower and tf_lower not in txt.lower():
-            return True
-
-        rect = ctypes.wintypes.RECT()
-        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
-        w = rect.right - rect.left
-        h = rect.bottom - rect.top
-
-        is_visible = bool(ctypes.windll.user32.IsWindowVisible(hwnd))
-        is_enabled = bool(ctypes.windll.user32.IsWindowEnabled(hwnd))
-
-        automation_id = None
+    for child in descendants:
         try:
-            app_uia = pywinauto.Application(backend="uia").connect(path="UauXT.exe")
-            win_uia = app_uia.top_window()
-            for child in win_uia.descendants():
-                try:
-                    ctrl_handle = int(child.handle)
-                except Exception:
-                    ctrl_handle = None
-                if ctrl_handle != hwnd:
+            cls = str(_safe(lambda: child.class_name(), "") or "")
+            txt = str(_safe(lambda: child.window_text(), "") or "")
+            automation_id = _safe(lambda: child.automation_id(), None)
+            if automation_id in (None, ""):
+                automation_id = _safe(lambda: child.control_id(), None)
+
+            if cf_terms and not any(term in cls.lower() for term in cf_terms):
+                continue
+            if tf_lower and tf_lower not in txt.lower():
+                continue
+            if aid_terms:
+                aid = str(automation_id or "").lower()
+                if not any(term in aid for term in aid_terms):
                     continue
-                automation_id = _safe(lambda: child.automation_id(), None)
-                if automation_id in (None, ""):
-                    automation_id = _safe(lambda: child.control_id(), None)
-                break
+
+            rect = _safe(lambda: child.rectangle(), None)
+            if rect is not None:
+                left = int(rect.left)
+                top = int(rect.top)
+                right = int(rect.right)
+                bottom = int(rect.bottom)
+                w = right - left
+                h = bottom - top
+            else:
+                left = top = right = bottom = w = h = None
+
+            controls.append({
+                "handle": _safe(lambda: int(child.handle), None),
+                "class_name": cls,
+                "text": txt,
+                "automation_id": automation_id,
+                "screen_rect": [left, top, right, bottom] if left is not None else None,
+                "size": [w, h] if w is not None else None,
+                "visible": bool(_safe(lambda: child.is_visible(), False)),
+                "enabled": bool(_safe(lambda: child.is_enabled(), False)),
+            })
         except Exception:
-            automation_id = None
+            continue
 
-        controls.append({
-            "handle": hwnd,
-            "class_name": cls,
-            "text": txt,
-            "automation_id": automation_id,
-            "screen_rect": [rect.left, rect.top, rect.right, rect.bottom],
-            "size": [w, h],
-            "visible": is_visible,
-            "enabled": is_enabled,
-        })
-        return True
-
-    cb = EnumChildProc(_enum_cb)
-    ctypes.windll.user32.EnumChildWindows(root_hwnd, cb, 0)
-
-    # Agrupa por class_name para facilitar análise
     by_class: Dict[str, int] = {}
     for c in controls:
         by_class[c["class_name"]] = by_class.get(c["class_name"], 0) + 1
@@ -847,7 +927,7 @@ def list_controls(class_filter: str = "", text_filter: str = "") -> Dict[str, An
     }
 
 
-def list_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar") -> Dict[str, Any]:
+def list_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar", window_title_regex: Optional[str] = None) -> Dict[str, Any]:
     """Descobre todas as toolbars da janela UauXT e retorna index + rect de cada botao.
 
     Uso: executar como subcomando 'list-toolbar-buttons' para mapear indices de botoes
@@ -864,18 +944,25 @@ def list_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar") -> Dict[str, A
 
     EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
-    _app, main_win = _connect_uauxt_window()
+    _app, main_win = _connect_uauxt_window(title_regex=window_title_regex)
 
     toolbar_handles: List[int] = []
+    seen_handles: set[int] = set()
 
-    def _enum_cb(hwnd: int, _lparam: int) -> bool:
+    def _collect_descendants(hwnd: int) -> None:
         buf = ctypes.create_unicode_buffer(256)
         ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
-        if buf.value == toolbar_class:
+        if buf.value == toolbar_class and hwnd not in seen_handles:
             toolbar_handles.append(hwnd)
-        return True
+            seen_handles.add(hwnd)
 
-    ctypes.windll.user32.EnumChildWindows(main_win.handle, EnumChildProc(_enum_cb), 0)
+        def _enum_cb(child_hwnd: int, _lparam: int) -> bool:
+            _collect_descendants(child_hwnd)
+            return True
+
+        ctypes.windll.user32.EnumChildWindows(hwnd, EnumChildProc(_enum_cb), 0)
+
+    _collect_descendants(main_win.handle)
 
     if not toolbar_handles:
         return {"ok": False, "action": "list-toolbar-buttons", "error": f"Nenhuma toolbar '{toolbar_class}' encontrada."}
@@ -927,7 +1014,12 @@ def list_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar") -> Dict[str, A
     return {"ok": True, "action": "list-toolbar-buttons", "toolbar_class": toolbar_class, "toolbars": toolbars_result}
 
 
-def map_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar", hover_delay_s: float = 0.9, toolbar_index: int = 0) -> Dict[str, Any]:
+def map_toolbar_buttons(
+    toolbar_class: str = "msvb_lib_toolbar",
+    hover_delay_s: float = 0.9,
+    toolbar_index: int = 0,
+    window_title_regex: Optional[str] = None,
+) -> Dict[str, Any]:
     """Mapeia nomes dos botoes da toolbar fazendo hover com o mouse e lendo o tooltip VB6.
 
     Para cada botao nao-separador:
@@ -956,7 +1048,7 @@ def map_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar", hover_delay_s: 
     EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
     EnumWndProc   = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
-    _app, main_win = _connect_uauxt_window()
+    _app, main_win = _connect_uauxt_window(title_regex=window_title_regex)
 
     # --- Localiza toolbars ---
     toolbar_handles: List[int] = []
@@ -1101,6 +1193,7 @@ def map_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar", hover_delay_s: 
     return {
         "ok": True,
         "action": "map-toolbar-buttons",
+        "window_title": str(_safe(main_win.window_text, "")),
         "toolbar_handle": tb_handle,
         "button_count": btn_count,
         "mapped": mapped_count,
@@ -1110,7 +1203,12 @@ def map_toolbar_buttons(toolbar_class: str = "msvb_lib_toolbar", hover_delay_s: 
     }
 
 
-def click_toolbar_button(button_index: int, toolbar_class: str = "msvb_lib_toolbar", click_x_pct: float = 0.5) -> Dict[str, Any]:
+def click_toolbar_button(
+    button_index: int,
+    toolbar_class: str = "msvb_lib_toolbar",
+    click_x_pct: float = 0.5,
+    window_title_regex: Optional[str] = None,
+) -> Dict[str, Any]:
     """Clica em botao de toolbar VB6 (msvb_lib_toolbar) pelo indice (0-based).
 
     A toolbar VB6 (msvb_lib_toolbar) nao expoe nomes de botoes via UIA, MSAA ou TB_GETBUTTONTEXTW.
@@ -1135,18 +1233,25 @@ def click_toolbar_button(button_index: int, toolbar_class: str = "msvb_lib_toolb
 
     EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
-    _app, main_win = _connect_uauxt_window()
+    _app, main_win = _connect_uauxt_window(title_regex=window_title_regex)
 
     toolbar_handles: List[int] = []
+    seen_handles: set[int] = set()
 
-    def _enum_cb(hwnd: int, _lparam: int) -> bool:
+    def _collect_descendants(hwnd: int) -> None:
         buf = ctypes.create_unicode_buffer(256)
         ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
-        if buf.value == toolbar_class:
+        if buf.value == toolbar_class and hwnd not in seen_handles:
             toolbar_handles.append(hwnd)
-        return True
+            seen_handles.add(hwnd)
 
-    ctypes.windll.user32.EnumChildWindows(main_win.handle, EnumChildProc(_enum_cb), 0)
+        def _enum_cb(child_hwnd: int, _lparam: int) -> bool:
+            _collect_descendants(child_hwnd)
+            return True
+
+        ctypes.windll.user32.EnumChildWindows(hwnd, EnumChildProc(_enum_cb), 0)
+
+    _collect_descendants(main_win.handle)
 
     if not toolbar_handles:
         return {
@@ -1155,7 +1260,7 @@ def click_toolbar_button(button_index: int, toolbar_class: str = "msvb_lib_toolb
             "error": f"Nenhuma janela da classe '{toolbar_class}' encontrada no processo UauXT.",
         }
 
-    # Preferir toolbar horizontal (width >> height)
+    # Preferir a toolbar mais ampla e com mais botões (comum em telas de manutenção).
     def _get_rect(hwnd: int) -> Tuple[int, int, int, int]:
         class WRECT(ctypes.Structure):
             _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long), ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
@@ -1164,13 +1269,16 @@ def click_toolbar_button(button_index: int, toolbar_class: str = "msvb_lib_toolb
         return r.left, r.top, r.right, r.bottom
 
     selected_handle = toolbar_handles[0]
+    selected_btn_count = ctypes.windll.user32.SendMessageW(selected_handle, 0x418, 0, 0)
     for h in toolbar_handles:
         l, t, r, b = _get_rect(h)
         w, ht = r - l, b - t
-        # escolhe a toolbar mais larga (horizontal principal de acoes)
+        btn_count = ctypes.windll.user32.SendMessageW(h, 0x418, 0, 0)
         sl, st, sr, sb = _get_rect(selected_handle)
-        if w > (sr - sl):
+        selected_w = sr - sl
+        if btn_count > selected_btn_count or (btn_count == selected_btn_count and w > selected_w):
             selected_handle = h
+            selected_btn_count = btn_count
 
     tb_handle = selected_handle
     tb_l, tb_t, tb_r, tb_b = _get_rect(tb_handle)
@@ -1404,30 +1512,40 @@ def main() -> int:
     parser_click.add_argument("--interaction-mode", default="right-corner-click")
     parser_click.add_argument("--pretty", action="store_true")
 
+    parser_input = subparsers.add_parser("set-control-text", help="Foca e preenche um controle por automation_id/control_id")
+    parser_input.add_argument("--control-id", default="", help="ID de controle do elemento")
+    parser_input.add_argument("--automation-id", default="", help="Automation ID do elemento")
+    parser_input.add_argument("--value", required=True)
+    parser_input.add_argument("--pretty", action="store_true")
+
     parser_refresh = subparsers.add_parser("refresh-footer", help="Atualiza rodape via caption (HOME + UP + duplo clique)")
     parser_refresh.add_argument("--handle", type=int, required=True)
     parser_refresh.add_argument("--page-up-times", type=int, default=1)
     parser_refresh.add_argument("--pretty", action="store_true")
 
-    parser_list_ctrl = subparsers.add_parser("list-controls", help="Enumera todos os controles filhos da janela UauXT (discovery de classes)")
+    parser_list_ctrl = subparsers.add_parser("list-controls", help="Enumera controles filhos da janela UauXT (discovery de classes e automation_id)")
     parser_list_ctrl.add_argument("--class-filter", default="", help="Filtrar por substring no nome da classe (case-insensitive)")
     parser_list_ctrl.add_argument("--text-filter", default="", help="Filtrar por substring no texto do controle (case-insensitive)")
+    parser_list_ctrl.add_argument("--automation-id-filter", default="", help="Filtrar por substring em automation_id, aceitando múltiplos valores separados por vírgula")
     parser_list_ctrl.add_argument("--pretty", action="store_true")
 
     parser_list_tb = subparsers.add_parser("list-toolbar-buttons", help="Lista todos os botoes de todas as toolbars (discovery de indices)")
     parser_list_tb.add_argument("--toolbar-class", default="msvb_lib_toolbar", help="Classe da janela toolbar (default: msvb_lib_toolbar)")
+    parser_list_tb.add_argument("--window-title-regex", default="", help="Regex opcional do titulo da janela UauXT para focar a tela correta")
     parser_list_tb.add_argument("--pretty", action="store_true")
 
     parser_map_tb = subparsers.add_parser("map-toolbar-buttons", help="Faz hover em cada botao e captura o nome via tooltip (auto-mapeamento)")
     parser_map_tb.add_argument("--toolbar-class", default="msvb_lib_toolbar", help="Classe da janela toolbar (default: msvb_lib_toolbar)")
     parser_map_tb.add_argument("--toolbar-index", type=int, default=0, help="Indice da toolbar ordenada por area desc (0=maior/horizontal, 1=vertical, etc.)")
     parser_map_tb.add_argument("--hover-delay", type=float, default=0.9, help="Segundos de espera por tooltip apos hover (default: 0.9)")
+    parser_map_tb.add_argument("--window-title-regex", default="", help="Regex opcional do titulo da janela UauXT para focar a tela correta")
     parser_map_tb.add_argument("--pretty", action="store_true")
 
     parser_toolbar = subparsers.add_parser("click-toolbar-button", help="Clica em botao de toolbar VB6 (msvb_lib_toolbar) pelo indice (TB_GETITEMRECT)")
     parser_toolbar.add_argument("--button-index", type=int, required=True, help="Indice 0-based do botao na toolbar")
     parser_toolbar.add_argument("--toolbar-class", default="msvb_lib_toolbar", help="Classe da janela toolbar (default: msvb_lib_toolbar)")
     parser_toolbar.add_argument("--click-x-pct", type=float, default=0.5, help="Fracao horizontal do rect do botao para o clique (0.0=esq, 0.5=centro, 1.0=dir). Use ~0.85 para dropdown/sidebutton. (default: 0.5)")
+    parser_toolbar.add_argument("--window-title-regex", default="", help="Regex opcional do titulo da janela UauXT para focar a tela correta")
     parser_toolbar.add_argument("--pretty", action="store_true")
 
     args = parser.parse_args()
@@ -1525,6 +1643,15 @@ def main() -> int:
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1
 
+        if args.command == "set-control-text":
+            data = set_control_text_by_id(
+                control_id=args.control_id or None,
+                automation_id=args.automation_id or None,
+                value=args.value,
+            )
+            _emit(data, pretty=args.pretty)
+            return 0 if data.get("ok") else 1
+
         if args.command == "refresh-footer":
             data = refresh_grid_footer_via_caption(
                 handle=int(args.handle),
@@ -1534,17 +1661,29 @@ def main() -> int:
             return 0 if data.get("ok") else 1
 
         if args.command == "list-controls":
-            data = list_controls(class_filter=args.class_filter, text_filter=args.text_filter)
+            data = list_controls(
+                class_filter=args.class_filter,
+                text_filter=args.text_filter,
+                automation_id_filter=args.automation_id_filter,
+            )
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1
 
         if args.command == "list-toolbar-buttons":
-            data = list_toolbar_buttons(toolbar_class=args.toolbar_class)
+            data = list_toolbar_buttons(
+                toolbar_class=args.toolbar_class,
+                window_title_regex=args.window_title_regex or None,
+            )
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1
 
         if args.command == "map-toolbar-buttons":
-            data = map_toolbar_buttons(toolbar_class=args.toolbar_class, hover_delay_s=float(args.hover_delay), toolbar_index=int(args.toolbar_index))
+            data = map_toolbar_buttons(
+                toolbar_class=args.toolbar_class,
+                hover_delay_s=float(args.hover_delay),
+                toolbar_index=int(args.toolbar_index),
+                window_title_regex=args.window_title_regex or None,
+            )
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1
 
@@ -1553,6 +1692,7 @@ def main() -> int:
                 button_index=int(args.button_index),
                 toolbar_class=args.toolbar_class,
                 click_x_pct=float(args.click_x_pct),
+                window_title_regex=args.window_title_regex or None,
             )
             _emit(data, pretty=args.pretty)
             return 0 if data.get("ok") else 1

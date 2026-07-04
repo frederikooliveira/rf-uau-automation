@@ -171,12 +171,17 @@ Clicar Botao Na Toolbar Acoes
     [Documentation]    Clica em botao da toolbar de acoes (msvb_lib_toolbar) pelo indice 0-based.
     ...                Indices mapeados em contas_pagar_data.resource (ex.: CONTAS_PAGAR_TOOLBAR_MANUTENCAO_INDEX).
     ...                Use keyword 'Listar Botoes Toolbar Via Probe' para descobrir novos indices.
-    ...                click_x_pct: fracao horizontal do clique no rect do botao.
-    ...                Ex.: 0.5=centro, 0.85=borda direita/dropdown.
-    [Arguments]    ${button_index}    ${click_x_pct}=0.5
-    Log    [DOM-CP] Clicando botao toolbar idx=${button_index} (x_pct=${click_x_pct}) via probe Win32...    console=True
-    Clicar Botao Toolbar Por Indice Via Probe    ${button_index}    click_x_pct=${click_x_pct}
+    [Arguments]    ${button_index}
+    Log    [DOM-CP] Clicando botao toolbar idx=${button_index} (x_pct=0.5) via probe Win32...    console=True
+    Clicar Botao Toolbar Por Indice Via Probe    ${button_index}
     Log    [DOM-CP] Botao idx=${button_index} clicado com sucesso.    console=True
+
+Clicar Botao Na Toolbar Acoes Lateral
+    [Documentation]    Clica no lado direito do botao da toolbar de acoes para abrir split-button/dropdown.
+    [Arguments]    ${button_index}
+    Log    [DOM-CP] Clicando botao lateral toolbar idx=${button_index} (x_pct=0.85) via probe Win32...    console=True
+    Clicar Botao Toolbar Lateral Por Indice Via Probe    ${button_index}
+    Log    [DOM-CP] Botao lateral idx=${button_index} clicado com sucesso.    console=True
 
 Selecionar Linha E Clicar Toolbar
     [Documentation]    Seleciona uma linha no grid de Processos de pagamento e clica em um botao da toolbar de acoes.
@@ -195,7 +200,7 @@ Clicar Dropdown Imprimir E Selecionar Nota Debito
     ...                Como ha apenas uma opcao no submenu, um DOWN e suficiente para selecionar.
     ...                Pre-requisito: linha ja selecionada no grid.
     Log    [DOM-CP] Abrindo dropdown do botao Imprimir (split-button, x_pct=0.85)...    console=True
-    Clicar Botao Na Toolbar Acoes    ${CONTAS_PAGAR_TLB_IMPRIMIR_SOLICITACAO_IDX}    click_x_pct=0.85
+    Clicar Botao Na Toolbar Acoes Lateral    ${CONTAS_PAGAR_TLB_IMPRIMIR_SOLICITACAO_IDX}
     Pausa Controlada    400ms    Aguardando menu dropdown abrir
     Log    [DOM-CP] Selecionando primeira opcao do menu via teclado (DOWN + ENTER)...    console=True
     Send Keys    keys={DOWN}

@@ -451,14 +451,9 @@ Selecionar Linha No Grid Processos Pagamento
     ...    ${UAUXT_GRID_PREFERRED_INDEX}
     RETURN    ${payload}
 
-Clicar Botao Toolbar Por Indice Via Probe
-    [Documentation]    Clica em botao da toolbar VB6 (msvb_lib_toolbar) pelo indice 0-based.
-    ...                A toolbar VB6 nao expoe textos via API — identifique indices com
-    ...                'Listar Botoes Toolbar Via Probe' ou probe list-toolbar-buttons.
-    ...                click_x_pct: fracao horizontal do rect do botao (0.0=esq, 0.5=centro, 1.0=dir).
-    ...                Use ~0.85 para clicar no dropdown/sidebutton de split-buttons.
-    [Arguments]    ${button_index}    ${toolbar_class}=msvb_lib_toolbar    ${click_x_pct}=0.5
-    Log    [UAUXT-GRID] Clicando botao toolbar idx=${button_index} (x_pct=${click_x_pct}) via probe...    console=True
+Executar Clique Botao Toolbar Via Probe
+    [Documentation]    Executa o clique no botao da toolbar VB6 com uma posicao horizontal fixa.
+    [Arguments]    ${button_index}    ${toolbar_class}=msvb_lib_toolbar    ${click_x_pct}=0.5    ${window_title_regex}=${EMPTY}
     ${json_output}=    Executar Probe Grid UauXT
     ...    click-toolbar-button
     ...    --button-index
@@ -467,9 +462,35 @@ Clicar Botao Toolbar Por Indice Via Probe
     ...    ${toolbar_class}
     ...    --click-x-pct
     ...    ${click_x_pct}
+    ...    --window-title-regex
+    ...    ${window_title_regex}
     ${payload}=    Parsear Payload Json Do Probe    ${json_output}
     ${ok}=    Get From Dictionary    ${payload}    ok
     Should Be True    ${ok}    Clique no botao idx=${button_index} da toolbar falhou: ${payload}
+    RETURN    ${payload}
+
+Clicar Botao Toolbar Por Indice Via Probe
+    [Documentation]    Clica em botao da toolbar VB6 (msvb_lib_toolbar) pelo indice 0-based.
+    ...                O ponto de clique fica fixo no centro do botao (0.5).
+    [Arguments]    ${button_index}    ${toolbar_class}=msvb_lib_toolbar    ${window_title_regex}=${EMPTY}
+    Log    [UAUXT-GRID] Clicando botao toolbar idx=${button_index} (x_pct=0.5) via probe...    console=True
+    ${payload}=    Executar Clique Botao Toolbar Via Probe
+    ...    ${button_index}
+    ...    ${toolbar_class}
+    ...    0.5
+    ...    ${window_title_regex}
+    Log    [UAUXT-GRID] Botao idx=${button_index} clicado com sucesso.    console=True
+    RETURN    ${payload}
+
+Clicar Botao Toolbar Lateral Por Indice Via Probe
+    [Documentation]    Clica em botao da toolbar VB6 usando o ponto lateral (0.85) para split-buttons/dropdown.
+    [Arguments]    ${button_index}    ${toolbar_class}=msvb_lib_toolbar    ${window_title_regex}=${EMPTY}
+    Log    [UAUXT-GRID] Clicando botao toolbar idx=${button_index} (x_pct=0.85) via probe...    console=True
+    ${payload}=    Executar Clique Botao Toolbar Via Probe
+    ...    ${button_index}
+    ...    ${toolbar_class}
+    ...    0.85
+    ...    ${window_title_regex}
     Log    [UAUXT-GRID] Botao idx=${button_index} clicado com sucesso.    console=True
     RETURN    ${payload}
 
@@ -477,12 +498,14 @@ Listar Botoes Toolbar Via Probe
     [Documentation]    Descobre e retorna todos os botoes das toolbars da janela UauXT ativa.
     ...                Use para mapear indices de botoes em qualquer tela com msvb_lib_toolbar.
     ...                Retorna payload JSON com lista de toolbars e seus botoes (index + screen_center).
-    [Arguments]    ${toolbar_class}=msvb_lib_toolbar
+    [Arguments]    ${toolbar_class}=msvb_lib_toolbar    ${window_title_regex}=${EMPTY}
     Log    [UAUXT-GRID] Listando botoes da toolbar '${toolbar_class}'...    console=True
     ${json_output}=    Executar Probe Grid UauXT
     ...    list-toolbar-buttons
     ...    --toolbar-class
     ...    ${toolbar_class}
+    ...    --window-title-regex
+    ...    ${window_title_regex}
     ...    --pretty
     ${payload}=    Parsear Payload Json Do Probe    ${json_output}
     Log    [UAUXT-GRID] Toolbars encontradas: ${payload}    console=True
@@ -495,7 +518,7 @@ Mapear Botoes Toolbar Via Probe
     ...                toolbar_index: 0=toolbar principal (maior area), 1=segunda (ex: visoes verticais).
     ...                ATENCAO: move o mouse fisicamente sobre cada botao — nao interagir durante execucao.
     ...                hover_delay: tempo (segundos) de espera por tooltip apos hover (default: 0.9).
-    [Arguments]    ${toolbar_class}=msvb_lib_toolbar    ${toolbar_index}=0    ${hover_delay}=0.9
+    [Arguments]    ${toolbar_class}=msvb_lib_toolbar    ${toolbar_index}=0    ${hover_delay}=0.9    ${window_title_regex}=${EMPTY}
     Log    [UAUXT-GRID] Mapeando toolbar '${toolbar_class}' (index=${toolbar_index}) via hover+tooltip...    console=True
     ${json_output}=    Executar Probe Grid UauXT
     ...    map-toolbar-buttons
@@ -505,6 +528,8 @@ Mapear Botoes Toolbar Via Probe
     ...    ${toolbar_index}
     ...    --hover-delay
     ...    ${hover_delay}
+    ...    --window-title-regex
+    ...    ${window_title_regex}
     ...    --pretty
     ${payload}=    Parsear Payload Json Do Probe    ${json_output}
     ${ok}=    Get From Dictionary    ${payload}    ok
